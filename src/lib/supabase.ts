@@ -1,0 +1,91 @@
+import { createClient } from '@supabase/supabase-js';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+
+if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) {
+	throw new Error('Missing Supabase environment variables. Please set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY in your .env file.');
+}
+
+export const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+	auth: {
+		autoRefreshToken: true,
+		persistSession: true,
+		detectSessionInUrl: true
+	}
+});
+
+// Types for our tables
+export type AttarProfile = {
+	id: string;
+	user_id: string;
+	pseudoname: string;
+	avatar_url: string | null;
+	available_moons: number;
+	receive_letters: boolean;
+	last_moon_refresh: string;
+	created_at: string;
+	updated_at: string;
+};
+
+export type AttarMailbox = {
+	id: string;
+	user_id: string;
+	subject: string;
+	content: string;
+	received_moons: number;
+	published: boolean;
+	created_at: string;
+	updated_at: string;
+};
+
+export type AttarVote = {
+	id: string;
+	user_id: string;
+	votable_type: 'letter' | 'env_decision';
+	votable_id: string;
+	choice_index: number | null;
+	moon_amount: number;
+	created_at: string;
+};
+
+export type AttarBackstory = {
+	id: string;
+	sentence: string;
+	reasoning: string | null;
+	created_at: string;
+};
+
+export type AttarEnvChoice = {
+	title: string;
+	description: string;
+	vote_count: number;
+};
+
+export type AttarEnv = {
+	id: string;
+	entity_image_url: string | null;
+	world_image_url: string | null;
+	world_video_url: string | null;
+	decisions: {
+		choices: AttarEnvChoice[];
+	};
+	created_at: string;
+	updated_at: string;
+};
+
+export type AttarMemory = {
+	id: string;
+	identity: string | null;
+	new_knowledge: any[];
+	interactions: any[];
+	env_id: string | null;
+	capability_ids: string[];
+	created_at: string;
+};
+
+export type AttarCapability = {
+	id: string;
+	name: string;
+	description: string | null;
+	unlocked_at: string;
+	created_at: string;
+};

@@ -195,6 +195,62 @@ export async function signIn(email: string, password: string) {
 	}
 }
 
+// Sign in with Google OAuth
+export async function signInWithGoogle() {
+	loading.set(true);
+	authError.set(null);
+	
+	try {
+		const { data, error } = await supabase.auth.signInWithOAuth({
+			provider: 'google',
+			options: {
+				redirectTo: `${window.location.origin}/`
+			}
+		});
+		
+		if (error) {
+			authError.set(error.message);
+			throw error;
+		}
+		
+		return data;
+	} catch (e) {
+		const message = e instanceof Error ? e.message : 'Google sign in failed';
+		authError.set(message);
+		throw e;
+	} finally {
+		loading.set(false);
+	}
+}
+
+// Sign in with X (Twitter) OAuth
+export async function signInWithTwitter() {
+	loading.set(true);
+	authError.set(null);
+	
+	try {
+		const { data, error } = await supabase.auth.signInWithOAuth({
+			provider: 'twitter',
+			options: {
+				redirectTo: `${window.location.origin}/`
+			}
+		});
+		
+		if (error) {
+			authError.set(error.message);
+			throw error;
+		}
+		
+		return data;
+	} catch (e) {
+		const message = e instanceof Error ? e.message : 'X sign in failed';
+		authError.set(message);
+		throw e;
+	} finally {
+		loading.set(false);
+	}
+}
+
 // Sign out
 export async function signOut() {
 	loading.set(true);

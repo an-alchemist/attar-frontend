@@ -202,10 +202,7 @@ export async function signInWithGoogle() {
 	
 	try {
 		const { data, error } = await supabase.auth.signInWithOAuth({
-			provider: 'google',
-			options: {
-				redirectTo: `${window.location.origin}/`
-			}
+			provider: 'google'
 		});
 		
 		if (error) {
@@ -229,11 +226,10 @@ export async function signInWithTwitter() {
 	authError.set(null);
 	
 	try {
+		// Note: Twitter OAuth works better without explicit redirectTo
+		// Supabase uses the Site URL from dashboard settings
 		const { data, error } = await supabase.auth.signInWithOAuth({
-			provider: 'twitter',
-			options: {
-				redirectTo: `${window.location.origin}/`
-			}
+			provider: 'twitter'
 		});
 		
 		if (error) {

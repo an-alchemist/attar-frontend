@@ -62,7 +62,7 @@
 	
 	<!-- Media section -->
 	{#if !compact}
-		<div class="relative aspect-video overflow-hidden" style="background: rgba(0,0,0,0.5);">
+		<div class="relative overflow-hidden" style="background: rgba(0,0,0,0.5);">
 			{#if isVideo}
 				<video
 					bind:this={videoEl}
@@ -70,13 +70,15 @@
 					loop
 					muted
 					playsinline
-					class="w-full h-full object-cover"
+					class="w-full h-auto object-contain"
+					style="max-height: 60vh;"
 				></video>
 			{:else}
 				<img 
 					src={mediaUrl} 
 					alt="Day {entry.day}" 
-					class="w-full h-full object-cover"
+					class="w-full h-auto object-contain"
+					style="max-height: 60vh;"
 				/>
 			{/if}
 			

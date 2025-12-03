@@ -458,14 +458,14 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 40px;
+		padding: 24px;
 		min-width: 0;
+		overflow-y: auto;
 	}
 	
 	.slide-card {
 		width: 100%;
-		max-width: 900px;
-		height: 580px;
+		max-width: 1100px;
 		border-radius: 16px;
 		overflow: hidden;
 		background: linear-gradient(145deg, rgba(50, 45, 60, 1) 0%, rgba(35, 30, 45, 1) 100%);
@@ -478,15 +478,13 @@
 	.card-media {
 		position: relative;
 		width: 100%;
-		height: 380px;
-		flex-shrink: 0;
 		background: rgba(0, 0, 0, 0.4);
 	}
 	
 	.media-content {
 		width: 100%;
-		height: 100%;
-		object-fit: cover;
+		height: auto;
+		display: block;
 	}
 	
 	.no-media {
@@ -522,9 +520,8 @@
 	}
 	
 	.card-info {
-		padding: 24px 32px;
+		padding: 20px 28px;
 		border-top: 1px solid rgba(120, 110, 130, 0.3);
-		flex: 1;
 		display: flex;
 		flex-direction: column;
 		overflow: hidden;
@@ -597,15 +594,7 @@
 		}
 		
 		.display-area {
-			padding: 20px;
-		}
-		
-		.slide-card {
-			height: 480px;
-		}
-		
-		.card-media {
-			height: 280px;
+			padding: 12px;
 		}
 		
 		.card-title {
@@ -613,7 +602,7 @@
 		}
 		
 		.card-info {
-			padding: 16px 20px;
+			padding: 14px 18px;
 		}
 	}
 </style>

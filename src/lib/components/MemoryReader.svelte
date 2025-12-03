@@ -243,11 +243,12 @@
 							<span>World State</span>
 						</div>
 						{#if selectedMemory.envImageUrl}
-							<div class="w-full h-40 rounded-lg overflow-hidden mb-3" style="border: 1px solid rgba(120, 110, 130, 0.3);">
+							<div class="w-full rounded-lg overflow-hidden mb-3" style="border: 1px solid rgba(120, 110, 130, 0.3); background: rgba(0, 0, 0, 0.3);">
 								{#if selectedMemory.envVideoUrl}
 									<video 
 										src={selectedMemory.envVideoUrl} 
-										class="w-full h-full object-cover"
+										class="w-full h-auto object-contain"
+										style="max-height: 50vh;"
 										autoplay
 										loop
 										muted
@@ -257,7 +258,8 @@
 									<img 
 										src={selectedMemory.envImageUrl} 
 										alt="World state" 
-										class="w-full h-full object-cover"
+										class="w-full h-auto object-contain"
+										style="max-height: 50vh;"
 									/>
 								{/if}
 							</div>

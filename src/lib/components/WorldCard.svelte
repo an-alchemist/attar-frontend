@@ -26,6 +26,10 @@
 	let ctx: CanvasRenderingContext2D | null = null;
 	let containerEl = $state<HTMLDivElement | null>(null);
 	let mediaReady = $state(false);
+	let mediaLoading = $state(true);
+	let mediaError = $state(false);
+	let retryCount = $state(0);
+	const MAX_RETRIES = 3;
 	let videoEl = $state<HTMLVideoElement | null>(null);
 	let mouseX = $state(0);
 	let mouseY = $state(0);
@@ -304,12 +308,37 @@
 		}));
 		
 		mediaReady = true;
+		mediaLoading = false;
+		mediaError = false;
 		ctx = canvas.getContext('2d');
 		drawFrame();
 	}
 	
+	function handleMediaError() {
+		if (retryCount < MAX_RETRIES) {
+			retryCount++;
+			// Retry after a short delay
+			setTimeout(() => {
+				setupCanvas();
+			}, 1000 * retryCount); // Exponential backoff: 1s, 2s, 3s
+		} else {
+			mediaLoading = false;
+			mediaError = true;
+		}
+	}
+	
+	function retryMediaLoad() {
+		retryCount = 0;
+		mediaError = false;
+		mediaLoading = true;
+		setupCanvas();
+	}
+	
 	function setupCanvas() {
 		if (!canvas || !containerEl) return;
+		
+		mediaLoading = true;
+		mediaError = false;
 		
 		if (isVideo) {
 			// For video, we wait for the video element to load metadata
@@ -319,7 +348,11 @@
 			img.onload = () => {
 				setupCanvasWithDimensions(img.naturalWidth, img.naturalHeight);
 			};
-			img.src = image;
+			img.onerror = () => {
+				handleMediaError();
+			};
+			// Add cache buster on retry
+			img.src = retryCount > 0 ? `${image}?retry=${retryCount}` : image;
 		}
 	}
 	
@@ -329,6 +362,10 @@
 			// Start monitoring for smooth loop transition
 			startLoopFadeMonitor();
 		}
+	}
+	
+	function handleVideoError() {
+		handleMediaError();
 	}
 	
 	let fadeInterval: ReturnType<typeof setInterval> | null = null;
@@ -393,17 +430,44 @@
 			bind:this={containerEl}
 			class="relative w-full p-4"
 		>
+			<!-- Loading state -->
+			{#if mediaLoading && !mediaReady}
+				<div class="loading-container">
+					<div class="loading-spinner"></div>
+					<div class="loading-text">
+						{#if retryCount > 0}
+							Retrying ({retryCount}/{MAX_RETRIES})...
+						{:else}
+							Loading world...
+						{/if}
+					</div>
+				</div>
+			{/if}
+			
+			<!-- Error state -->
+			{#if mediaError}
+				<div class="error-container">
+					<div class="error-icon">⚠</div>
+					<div class="error-text">Failed to load media</div>
+					<button class="retry-btn" onclick={retryMediaLoad}>
+						↻ Retry
+					</button>
+				</div>
+			{/if}
+			
 			{#if isVideo}
 				<!-- Video background with smooth loop fade -->
 				<video
 					bind:this={videoEl}
-					src={image}
+					src={retryCount > 0 ? `${image}?retry=${retryCount}` : image}
 					autoplay
 					loop
 					muted
 					playsinline
 					onloadedmetadata={handleVideoLoaded}
+					onerror={handleVideoError}
 					class="video-loop w-full h-auto block rounded"
+					class:opacity-0={mediaLoading || mediaError}
 				></video>
 				<!-- Transparent canvas overlay for interactive elements -->
 				<canvas
@@ -414,6 +478,7 @@
 					onmouseleave={handleMouseLeave}
 					class="absolute top-4 left-4 right-4 cursor-pointer rounded touch-none"
 					style="width: calc(100% - 2rem); height: auto;"
+					class:opacity-0={mediaLoading || mediaError}
 				></canvas>
 			{:else}
 				<!-- Image mode: canvas draws everything -->
@@ -424,6 +489,7 @@
 					onmousemove={handleMouseMove}
 					onmouseleave={handleMouseLeave}
 					class="w-full h-auto cursor-pointer block rounded touch-none"
+					class:opacity-0={mediaLoading || mediaError}
 				></canvas>
 			{/if}
 		</div>
@@ -592,6 +658,10 @@
 		transition: opacity 0.15s ease-out;
 	}
 	
+	.opacity-0 {
+		opacity: 0;
+	}
+	
 	input[type="number"]::-webkit-inner-spin-button,
 	input[type="number"]::-webkit-outer-spin-button {
 		-webkit-appearance: none;
@@ -605,6 +675,87 @@
 	/* Touch device optimizations */
 	.touch-none {
 		touch-action: none;
+	}
+	
+	/* Loading state */
+	.loading-container {
+		position: absolute;
+		inset: 1rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 16px;
+		background: rgba(0, 0, 0, 0.4);
+		border-radius: 8px;
+		z-index: 5;
+	}
+	
+	.loading-spinner {
+		width: 48px;
+		height: 48px;
+		border: 3px solid rgba(200, 230, 180, 0.2);
+		border-top-color: rgba(200, 230, 180, 0.8);
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+	
+	@keyframes spin {
+		to { transform: rotate(360deg); }
+	}
+	
+	.loading-text {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 12px;
+		color: rgba(200, 230, 180, 0.7);
+		animation: pulse-text 1.5s ease-in-out infinite;
+	}
+	
+	@keyframes pulse-text {
+		0%, 100% { opacity: 0.7; }
+		50% { opacity: 1; }
+	}
+	
+	/* Error state */
+	.error-container {
+		position: absolute;
+		inset: 1rem;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 12px;
+		background: rgba(0, 0, 0, 0.5);
+		border-radius: 8px;
+		z-index: 5;
+	}
+	
+	.error-icon {
+		font-size: 36px;
+		color: rgba(255, 180, 150, 0.8);
+	}
+	
+	.error-text {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 13px;
+		color: rgba(255, 180, 150, 0.9);
+	}
+	
+	.retry-btn {
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 12px;
+		padding: 10px 20px;
+		color: rgba(200, 230, 180, 0.9);
+		background: rgba(200, 230, 180, 0.15);
+		border: 1px solid rgba(200, 230, 180, 0.4);
+		border-radius: 6px;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+	
+	.retry-btn:hover {
+		background: rgba(200, 230, 180, 0.25);
+		transform: scale(1.05);
 	}
 	
 	/* Mobile responsive adjustments */

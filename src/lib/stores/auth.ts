@@ -87,11 +87,17 @@ async function fetchProfile(userId: string) {
 		// If profile doesn't exist (PGRST116 = no rows), create it
 		if (error && error.code === 'PGRST116') {
 			console.log('Profile not found, creating new profile...');
+			
+			// Get pseudoname from user metadata (set during signup)
+			const { data: { user: currentUser } } = await supabase.auth.getUser();
+			const metaPseudoName = currentUser?.user_metadata?.pseudoname;
+			const pseudoname = metaPseudoName && metaPseudoName.trim() ? metaPseudoName.trim() : 'Anonymous';
+			
 			const { data: newProfile, error: createError } = await supabase
 				.from('attar_profile')
 				.insert({
 					user_id: userId,
-					pseudoname: 'Anonymous',
+					pseudoname: pseudoname,
 					available_moons: 13,
 					receive_letters: true
 				})

@@ -15,16 +15,49 @@
 	let error = $state('');
 	let success = $state('');
 	let showConfirmation = $state(false);
+	
+	// Pseudonym validation: letters, numbers, underscores, hyphens, spaces only
+	const PSEUDONYM_PATTERN = /^[a-zA-Z0-9_\- ]*$/;
+	const PSEUDONYM_MIN_LENGTH = 2;
+	const PSEUDONYM_MAX_LENGTH = 30;
+	
+	const pseudonymError = $derived(() => {
+		if (!pseudoname) return ''; // Optional, so empty is fine
+		if (pseudoname.length < PSEUDONYM_MIN_LENGTH) return `Min ${PSEUDONYM_MIN_LENGTH} characters`;
+		if (pseudoname.length > PSEUDONYM_MAX_LENGTH) return `Max ${PSEUDONYM_MAX_LENGTH} characters`;
+		if (!PSEUDONYM_PATTERN.test(pseudoname)) return 'Only letters, numbers, spaces, - and _';
+		return '';
+	});
+	
+	const isPseudonymValid = $derived(!pseudoname || (pseudoname.length >= PSEUDONYM_MIN_LENGTH && PSEUDONYM_PATTERN.test(pseudoname)));
+	
+	function sanitizePseudonym(value: string): string {
+		// Remove any character that doesn't match the pattern
+		return value.replace(/[^a-zA-Z0-9_\- ]/g, '').slice(0, PSEUDONYM_MAX_LENGTH);
+	}
+	
+	function handlePseudonymInput(e: Event) {
+		const input = e.target as HTMLInputElement;
+		pseudoname = sanitizePseudonym(input.value);
+	}
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		error = '';
 		success = '';
+		
+		// Validate pseudonym on signup
+		if (mode === 'signup' && pseudoname && !isPseudonymValid) {
+			error = pseudonymError() || 'Invalid pseudonym';
+			return;
+		}
+		
 		loading = true;
 
 		try {
 			if (mode === 'signup') {
-				const result = await signUp(email, password, pseudoname || undefined);
+				const cleanPseudo = pseudoname.trim() || undefined;
+				const result = await signUp(email, password, cleanPseudo);
 				
 				if (result.confirmEmail) {
 					// Email confirmation required
@@ -147,23 +180,30 @@
 					</div>
 				{/if}
 
-				{#if mode === 'signup'}
-					<div class="form-field">
-						<label for="pseudoname">
-							<span class="field-label">pseudoname</span>
-							<span class="field-optional">(optional)</span>
-						</label>
-						<input
-							type="text"
-							id="pseudoname"
-							bind:value={pseudoname}
-							placeholder="Anonymous"
-							maxlength="50"
-							autocomplete="username"
-							disabled={loading}
-						/>
-					</div>
-				{/if}
+			{#if mode === 'signup'}
+				<div class="form-field">
+					<label for="pseudoname">
+						<span class="field-label">pseudoname</span>
+						<span class="field-optional">(optional)</span>
+					</label>
+					<input
+						type="text"
+						id="pseudoname"
+						value={pseudoname}
+						oninput={handlePseudonymInput}
+						placeholder="Anonymous"
+						maxlength={PSEUDONYM_MAX_LENGTH}
+						autocomplete="username"
+						disabled={loading}
+						class:input-error={pseudoname && !isPseudonymValid}
+					/>
+					{#if pseudoname && pseudonymError()}
+						<span class="field-error">{pseudonymError()}</span>
+					{:else}
+						<span class="field-hint">Letters, numbers, spaces, - and _ only</span>
+					{/if}
+				</div>
+			{/if}
 
 				<div class="form-field">
 					<label for="email">
@@ -461,6 +501,21 @@
 		margin-top: 6px;
 		font-size: 11px;
 		color: rgba(200, 230, 180, 0.4);
+	}
+	
+	.field-error {
+		display: block;
+		margin-top: 6px;
+		font-size: 11px;
+		color: rgba(255, 150, 150, 0.9);
+	}
+	
+	.input-error {
+		border-color: rgba(255, 100, 100, 0.5) !important;
+	}
+	
+	.input-error:focus {
+		box-shadow: 0 0 0 3px rgba(255, 100, 100, 0.15) !important;
 	}
 
 	.form-field input {

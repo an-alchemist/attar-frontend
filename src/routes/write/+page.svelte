@@ -86,7 +86,7 @@
 		<div class="flex items-center justify-between px-6 py-4" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(120, 110, 130, 0.3);">
 			<div class="flex items-center gap-3">
 				<span class="text-sm" style="color: rgba(200, 230, 180, 0.9);">
-					Compose.exe
+					Compose.att
 				</span>
 				{#if $isAuthenticated && !loading}
 					<span class="text-xs px-2 py-0.5 rounded" style="background: rgba(200, 230, 180, 0.1); color: rgba(200, 230, 180, 0.6);">

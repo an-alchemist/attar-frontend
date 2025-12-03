@@ -3,6 +3,7 @@
 	import type { NodeProps } from '@xyflow/svelte';
 	import { onMount } from 'svelte';
 	import { getTimelineEntries, type TimelineEntry } from '$lib/stores/timeline';
+	import TimelinePlayer from './TimelinePlayer.svelte';
 	
 	type TimelineNodeData = {
 		label?: string;
@@ -13,6 +14,7 @@
 	let timeline = $state<TimelineEntry[]>([]);
 	let loading = $state(true);
 	let hoveredEntry = $state<number | null>(null);
+	let showPlayer = $state(false);
 	
 	// Get first and last day for footer
 	const firstDay = $derived(timeline.length > 0 ? timeline[timeline.length - 1].day : 1);
@@ -25,6 +27,14 @@
 	
 	function openFullTimeline() {
 		window.location.href = '/timeline';
+	}
+	
+	function openPlayer() {
+		showPlayer = true;
+	}
+	
+	function closePlayer() {
+		showPlayer = false;
 	}
 </script>
 
@@ -42,7 +52,7 @@
 	<div class="flex items-center justify-between px-3 py-2 shrink-0" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(120, 110, 130, 0.3);">
 		<div class="flex items-center gap-2">
 			<span class="text-xs" style="font-family: 'JetBrains Mono', monospace; color: rgba(200, 230, 180, 0.8);">
-				Timeline.exe
+				Timeline.att
 			</span>
 		</div>
 		<span class="text-xs" style="font-family: 'JetBrains Mono', monospace; color: rgba(200, 230, 180, 0.5);">
@@ -134,15 +144,29 @@
 				day {firstDay} → {lastDay}
 			{/if}
 		</span>
-		<button
-			onclick={openFullTimeline}
-			class="text-xs px-2 py-1 rounded transition-all hover:scale-105"
-			style="font-family: 'JetBrains Mono', monospace; color: rgba(200, 230, 180, 0.8); border: 1px solid rgba(200, 230, 180, 0.3); background: rgba(200, 230, 180, 0.1);"
-		>
-			View All
-		</button>
+		<div class="flex items-center gap-2">
+			<button
+				onclick={openPlayer}
+				disabled={loading || timeline.length === 0}
+				class="text-xs px-2 py-1 rounded transition-all hover:scale-105"
+				style="font-family: 'JetBrains Mono', monospace; color: rgba(147, 112, 219, 0.9); border: 1px solid rgba(147, 112, 219, 0.4); background: rgba(147, 112, 219, 0.15);"
+			>
+				▶ Play
+			</button>
+			<button
+				onclick={openFullTimeline}
+				class="text-xs px-2 py-1 rounded transition-all hover:scale-105"
+				style="font-family: 'JetBrains Mono', monospace; color: rgba(200, 230, 180, 0.8); border: 1px solid rgba(200, 230, 180, 0.3); background: rgba(200, 230, 180, 0.1);"
+			>
+				View All
+			</button>
+		</div>
 	</div>
 </div>
+
+{#if showPlayer}
+	<TimelinePlayer entries={timeline} onClose={closePlayer} />
+{/if}
 
 <style>
 	.timeline-node {

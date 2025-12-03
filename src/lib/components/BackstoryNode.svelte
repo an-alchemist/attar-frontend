@@ -103,7 +103,7 @@
 							</div>
 							<div>
 								<div style="font-size: 16px; color: rgba(200, 230, 180, 0.9);">
-									Backstory.exe
+									Backstory.att
 								</div>
 								<div style="font-size: 12px; margin-top: 2px; color: rgba(200, 230, 180, 0.5);">
 									${backstory.length} days logged
@@ -165,7 +165,7 @@
 	<div class="flex items-center justify-between px-3 py-2 shrink-0" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(120, 110, 130, 0.3);">
 		<div class="flex items-center gap-2">
 			<span class="text-xs" style="font-family: 'JetBrains Mono', monospace; color: rgba(200, 230, 180, 0.8);">
-				Backstory.exe
+				Backstory.att
 			</span>
 		</div>
 		<span class="text-xs" style="font-family: 'JetBrains Mono', monospace; color: rgba(200, 230, 180, 0.5);">

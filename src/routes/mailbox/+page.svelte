@@ -99,7 +99,7 @@
 				☰
 			</button>
 			<div class="title-section">
-				<span class="title">Mailbox.exe</span>
+				<span class="title">Mailbox.att</span>
 				<span class="subtitle">{letters.length} letters</span>
 			</div>
 		</div>

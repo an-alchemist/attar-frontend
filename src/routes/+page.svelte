@@ -8,9 +8,11 @@
 	import BackstoryNode from '$lib/components/BackstoryNode.svelte';
 	import MemoryNode from '$lib/components/MemoryNode.svelte';
 	import TimelineNode from '$lib/components/TimelineNode.svelte';
+	import MobileWorldView from '$lib/components/MobileWorldView.svelte';
 	import { onMount } from 'svelte';
 	import { getLatestEnv, type CurrentEnv } from '$lib/stores/env';
 	import { getLatestBackstory, type BackstoryEntry } from '$lib/stores/backstory';
+	import { isMobile } from '$lib/stores/mobile';
 	
 	// Server data for OG meta tags
 	let { data } = $props();
@@ -215,51 +217,60 @@
 	{/if}
 </svelte:head>
 
-<div 
-	class="canvas-container relative w-full h-full bg-black overflow-hidden"
-	onmousemove={handleMouseMove}
-	bind:this={canvasElement}
-	style="width: 100%; height: 100%; --mx: {mouseX}px; --my: {mouseY}px; --gap: 12px;"
->
-	<!-- Static gray dot grid -->
-	<div
-		class="absolute inset-0 pointer-events-none"
-		style="
-			background-image:
-				radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
-			background-size: var(--gap) var(--gap);
-			background-position: 0 0;
-		"
-	></div>
-	<!-- Light hover effect -->
-	<div
-		class="absolute inset-0 pointer-events-none"
-		style="
-			mix-blend-mode: screen;
-			background: radial-gradient(
-				circle at var(--mx) var(--my),
-				rgba(255,255,255,0.20) 0%,
-				rgba(255,255,255,0.08) 20%,
-				transparent 35%
-			);
-			opacity: .7;
-		"
-	></div>
-	
-	<!-- SvelteFlow canvas -->
-	<div class="relative w-full h-full">
-		<SvelteFlowProvider>
-			<FlowCanvas 
-				bind:nodes={nodes} 
-				bind:edges={edges}
-				nodeTypes={nodeTypes}
-				worldCenter={worldCenter}
-				bind:navigationFunctions={navigationFunctions}
-			/>
-		</SvelteFlowProvider>
+<!-- Mobile View -->
+{#if $isMobile && currentEnv}
+	<MobileWorldView 
+		currentEnv={currentEnv}
+		latestBackstory={latestBackstory}
+	/>
+<!-- Desktop View -->
+{:else}
+	<div 
+		class="canvas-container relative w-full h-full bg-black overflow-hidden"
+		onmousemove={handleMouseMove}
+		bind:this={canvasElement}
+		style="width: 100%; height: 100%; --mx: {mouseX}px; --my: {mouseY}px; --gap: 12px;"
+	>
+		<!-- Static gray dot grid -->
+		<div
+			class="absolute inset-0 pointer-events-none"
+			style="
+				background-image:
+					radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+				background-size: var(--gap) var(--gap);
+				background-position: 0 0;
+			"
+		></div>
+		<!-- Light hover effect -->
+		<div
+			class="absolute inset-0 pointer-events-none"
+			style="
+				mix-blend-mode: screen;
+				background: radial-gradient(
+					circle at var(--mx) var(--my),
+					rgba(255,255,255,0.20) 0%,
+					rgba(255,255,255,0.08) 20%,
+					transparent 35%
+				);
+				opacity: .7;
+			"
+		></div>
+		
+		<!-- SvelteFlow canvas -->
+		<div class="relative w-full h-full">
+			<SvelteFlowProvider>
+				<FlowCanvas 
+					bind:nodes={nodes} 
+					bind:edges={edges}
+					nodeTypes={nodeTypes}
+					worldCenter={worldCenter}
+					bind:navigationFunctions={navigationFunctions}
+				/>
+			</SvelteFlowProvider>
+		</div>
+		
 	</div>
-	
-</div>
+{/if}
 
 <style>
 	:global(.svelte-flow) {

@@ -104,7 +104,7 @@
 				☰
 			</button>
 			<div class="title-section">
-				<span class="title">Timeline.exe</span>
+				<span class="title">Timeline.att</span>
 				<span class="subtitle">{timeline.length} days</span>
 			</div>
 		</div>

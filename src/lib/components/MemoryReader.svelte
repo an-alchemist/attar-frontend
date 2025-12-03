@@ -174,8 +174,8 @@
 				{/if}
 				
 				<!-- Themes Section -->
-				{@const themes = selectedMemory.newKnowledge.filter(k => k.type === 'theme')}
-				{#if themes.length > 0}
+				{#if selectedMemory.newKnowledge.filter(k => k.type === 'theme').length > 0}
+					{@const themes = selectedMemory.newKnowledge.filter(k => k.type === 'theme')}
 					<div class="memory-section">
 						<div class="flex items-center gap-2 mb-3 text-xs uppercase tracking-wider" style="color: rgba(200, 230, 180, 0.6);">
 							<span style="color: rgba(100, 149, 237, 0.8);">⬡</span>
@@ -195,8 +195,8 @@
 				{/if}
 				
 				<!-- Ideas Section -->
-				{@const ideas = selectedMemory.newKnowledge.filter(k => k.type === 'idea')}
-				{#if ideas.length > 0}
+				{#if selectedMemory.newKnowledge.filter(k => k.type === 'idea').length > 0}
+					{@const ideas = selectedMemory.newKnowledge.filter(k => k.type === 'idea')}
 					<div class="memory-section">
 						<div class="flex items-center gap-2 mb-3 text-xs uppercase tracking-wider" style="color: rgba(200, 230, 180, 0.6);">
 							<span style="color: rgba(255, 218, 185, 0.8);">✦</span>

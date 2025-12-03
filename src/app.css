@@ -6,10 +6,57 @@
 	width: 100%;
 	height: 100%;
 	overflow: hidden;
+	/* Prevent iOS rubber banding */
+	overscroll-behavior: none;
+	/* Enable smooth scrolling */
+	-webkit-overflow-scrolling: touch;
 }
 
 :global(#app) {
 	width: 100%;
 	height: 100%;
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 767px) {
+	/* Ensure minimum touch target size */
+	:global(button, a, [role="button"]) {
+		min-height: 44px;
+		min-width: 44px;
+	}
+	
+	/* Prevent text selection on mobile for UI elements */
+	:global(.no-select) {
+		-webkit-user-select: none;
+		user-select: none;
+	}
+	
+	/* Disable hover effects on touch devices */
+	:global(.hover-effect:hover) {
+		transform: none !important;
+	}
+	
+	/* Safe area padding for notched devices */
+	:global(.safe-area-bottom) {
+		padding-bottom: env(safe-area-inset-bottom, 0);
+	}
+	
+	:global(.safe-area-top) {
+		padding-top: env(safe-area-inset-top, 0);
+	}
+}
+
+/* Improve tap highlight on mobile */
+:global(button, a, [role="button"]) {
+	-webkit-tap-highlight-color: rgba(200, 230, 180, 0.1);
+}
+
+/* Smooth transitions for responsive changes */
+@media (prefers-reduced-motion: no-preference) {
+	:global(*) {
+		transition-property: opacity, transform;
+		transition-duration: 0.2s;
+		transition-timing-function: ease;
+	}
 }
 

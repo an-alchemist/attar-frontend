@@ -28,7 +28,7 @@
 	<!-- Terminal header -->
 	<div class="flex items-center px-3 py-2 shrink-0" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(120, 110, 130, 0.3);">
 		<div class="text-xs" style="font-family: 'JetBrains Mono', monospace; color: rgba(200, 230, 180, 0.8);">
-			{data.label || 'Unknown'}.exe
+			{data.label || 'Unknown'}.att
 		</div>
 	</div>
 	

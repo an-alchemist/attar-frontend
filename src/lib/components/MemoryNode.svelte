@@ -60,7 +60,7 @@
 	<div class="flex items-center justify-between px-3 py-2 shrink-0" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(120, 110, 130, 0.3);">
 		<div class="flex items-center gap-2">
 			<span class="text-xs" style="font-family: 'JetBrains Mono', monospace; color: rgba(200, 230, 180, 0.8);">
-				Memory.exe
+				Memory.att
 			</span>
 		</div>
 		<span class="text-xs" style="font-family: 'JetBrains Mono', monospace; color: rgba(200, 230, 180, 0.5);">
@@ -85,13 +85,15 @@
 			</div>
 		{:else}
 			<div class="memory-grid">
-				{#each memories.slice(0, 24) as memory (memory.id)}
+				{#each memories.slice(0, 24) as memory, index (memory.id)}
 					<button
-						class="memory-square"
+						class="memory-square living-square"
 						style="
-							background: {getColorForDay(memory.day)};
+							--base-color: {getColorForDay(memory.day)};
+							--glow-color: {getColorForDay(memory.day).replace('0.6', '0.8')};
+							--delay: {(index % 6) * 0.15 + Math.floor(index / 6) * 0.2}s;
+							--duration: {2.5 + (index % 3) * 0.5}s;
 							transform: {hoveredDay === memory.day ? 'scale(1.15)' : 'scale(1)'};
-							box-shadow: {hoveredDay === memory.day ? '0 0 12px ' + getColorForDay(memory.day) : 'none'};
 							z-index: {hoveredDay === memory.day ? '10' : '1'};
 						"
 						onmouseenter={() => hoveredDay = memory.day}
@@ -99,6 +101,8 @@
 						onclick={() => openMemory(memory)}
 						title="Day {memory.day}"
 					>
+						<span class="square-shimmer"></span>
+						<span class="square-pulse"></span>
 						{#if memory.newKnowledge.length > 0}
 							<span class="square-indicator"></span>
 						{/if}
@@ -153,6 +157,105 @@
 		border-color: rgba(255, 255, 255, 0.3);
 	}
 	
+	/* Living hypnotic square effects */
+	.living-square {
+		background: var(--base-color);
+		overflow: hidden;
+		animation: breathe var(--duration) ease-in-out infinite;
+		animation-delay: var(--delay);
+	}
+	
+	/* Breathing pulse - makes squares feel alive */
+	@keyframes breathe {
+		0%, 100% {
+			box-shadow: 
+				inset 0 0 8px rgba(255, 255, 255, 0.1),
+				0 0 4px var(--base-color);
+			filter: brightness(1);
+		}
+		50% {
+			box-shadow: 
+				inset 0 0 15px rgba(255, 255, 255, 0.25),
+				0 0 12px var(--glow-color);
+			filter: brightness(1.15);
+		}
+	}
+	
+	/* Light shimmer sweep effect */
+	.square-shimmer {
+		position: absolute;
+		inset: 0;
+		background: linear-gradient(
+			115deg,
+			transparent 0%,
+			transparent 30%,
+			rgba(255, 255, 255, 0.25) 45%,
+			rgba(255, 255, 255, 0.4) 50%,
+			rgba(255, 255, 255, 0.25) 55%,
+			transparent 70%,
+			transparent 100%
+		);
+		transform: translateX(-150%);
+		animation: shimmer 4s ease-in-out infinite;
+		animation-delay: calc(var(--delay) + 1s);
+		pointer-events: none;
+	}
+	
+	@keyframes shimmer {
+		0%, 85%, 100% {
+			transform: translateX(-150%);
+		}
+		35%, 50% {
+			transform: translateX(150%);
+		}
+	}
+	
+	/* Inner pulse ring effect */
+	.square-pulse {
+		position: absolute;
+		inset: 0;
+		border-radius: 4px;
+		border: 1px solid rgba(255, 255, 255, 0);
+		animation: pulse-ring 3s ease-out infinite;
+		animation-delay: calc(var(--delay) * 2);
+		pointer-events: none;
+	}
+	
+	@keyframes pulse-ring {
+		0%, 70%, 100% {
+			border-color: rgba(255, 255, 255, 0);
+			transform: scale(0.8);
+			opacity: 0;
+		}
+		35% {
+			border-color: rgba(255, 255, 255, 0.6);
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+	
+	/* Hover state - intensify the living effect */
+	.living-square:hover {
+		animation-play-state: paused;
+		box-shadow: 
+			inset 0 0 20px rgba(255, 255, 255, 0.3),
+			0 0 20px var(--glow-color) !important;
+		filter: brightness(1.25) !important;
+	}
+	
+	.living-square:hover .square-shimmer {
+		animation-play-state: paused;
+		transform: translateX(0);
+		background: linear-gradient(
+			115deg,
+			transparent 0%,
+			rgba(255, 255, 255, 0.1) 30%,
+			rgba(255, 255, 255, 0.2) 50%,
+			rgba(255, 255, 255, 0.1) 70%,
+			transparent 100%
+		);
+	}
+	
 	.square-indicator {
 		position: absolute;
 		top: 2px;
@@ -162,5 +265,18 @@
 		border-radius: 50%;
 		background: rgba(255, 255, 255, 0.9);
 		box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+		animation: indicator-glow 1.5s ease-in-out infinite;
+		z-index: 2;
+	}
+	
+	@keyframes indicator-glow {
+		0%, 100% {
+			box-shadow: 0 0 4px rgba(255, 255, 255, 0.5);
+			transform: scale(1);
+		}
+		50% {
+			box-shadow: 0 0 8px rgba(255, 255, 255, 0.9);
+			transform: scale(1.2);
+		}
 	}
 </style>

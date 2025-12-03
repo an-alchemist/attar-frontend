@@ -68,13 +68,33 @@
 		return Math.round((votes / total) * 100);
 	}
 	
-	function handleCanvasClick(e: MouseEvent) {
+	function handleCanvasClick(e: MouseEvent | TouchEvent) {
 		if (!canvas) return;
 		const rect = canvas.getBoundingClientRect();
 		const scaleX = canvas.width / rect.width;
 		const scaleY = canvas.height / rect.height;
-		const clickX = (e.clientX - rect.left) * scaleX;
-		const clickY = (e.clientY - rect.top) * scaleY;
+		
+		// Handle both mouse and touch events
+		let clientX: number, clientY: number;
+		if ('changedTouches' in e) {
+			// Touch end event - use changedTouches
+			if (e.changedTouches.length === 0) return;
+			clientX = e.changedTouches[0].clientX;
+			clientY = e.changedTouches[0].clientY;
+			e.preventDefault(); // Prevent double-firing with click
+		} else if ('touches' in e) {
+			// Touch start/move event
+			if (e.touches.length === 0) return;
+			clientX = e.touches[0].clientX;
+			clientY = e.touches[0].clientY;
+		} else {
+			// Mouse event
+			clientX = e.clientX;
+			clientY = e.clientY;
+		}
+		
+		const clickX = (clientX - rect.left) * scaleX;
+		const clickY = (clientY - rect.top) * scaleY;
 		
 		for (const box of boxes) {
 			if (clickX >= box.x && clickX <= box.x + box.width &&
@@ -389,9 +409,10 @@
 				<canvas
 					bind:this={canvas}
 					onclick={handleCanvasClick}
+					ontouchend={handleCanvasClick}
 					onmousemove={handleMouseMove}
 					onmouseleave={handleMouseLeave}
-					class="absolute top-4 left-4 right-4 cursor-pointer rounded"
+					class="absolute top-4 left-4 right-4 cursor-pointer rounded touch-none"
 					style="width: calc(100% - 2rem); height: auto;"
 				></canvas>
 			{:else}
@@ -399,9 +420,10 @@
 				<canvas
 					bind:this={canvas}
 					onclick={handleCanvasClick}
+					ontouchend={handleCanvasClick}
 					onmousemove={handleMouseMove}
 					onmouseleave={handleMouseLeave}
-					class="w-full h-auto cursor-pointer block rounded"
+					class="w-full h-auto cursor-pointer block rounded touch-none"
 				></canvas>
 			{/if}
 		</div>
@@ -578,5 +600,23 @@
 	
 	input[type="number"] {
 		-moz-appearance: textfield;
+	}
+	
+	/* Touch device optimizations */
+	.touch-none {
+		touch-action: none;
+	}
+	
+	/* Mobile responsive adjustments */
+	@media (max-width: 767px) {
+		.world-card-container :global(.terminal-window) {
+			border-radius: 12px;
+		}
+		
+		/* Larger touch targets for voting buttons on mobile */
+		.world-card-container :global(button) {
+			min-height: 44px;
+			min-width: 44px;
+		}
 	}
 </style>

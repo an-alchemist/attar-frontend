@@ -1,17 +1,33 @@
-import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ssr';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 
 if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) {
 	throw new Error('Missing Supabase environment variables. Please set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY in your .env file.');
 }
 
-export const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-	auth: {
-		autoRefreshToken: true,
-		persistSession: true,
-		detectSessionInUrl: true
-	}
-});
+// Browser client - uses cookies managed by hooks.server.ts
+export const supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+
+// Function to create server client (used in hooks.server.ts and +page.server.ts)
+export function createSupabaseServerClient(cookies: {
+	get: (key: string) => string | undefined;
+	set: (key: string, value: string, options?: any) => void;
+	delete: (key: string, options?: any) => void;
+}) {
+	return createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+		cookies: {
+			getAll() {
+				// @ts-ignore - SvelteKit cookies API
+				return cookies.getAll?.() || [];
+			},
+			setAll(cookiesToSet) {
+				cookiesToSet.forEach(({ name, value, options }) => {
+					cookies.set(name, value, { ...options, path: '/' });
+				});
+			}
+		}
+	});
+}
 
 // Types for our tables
 export type AttarProfile = {

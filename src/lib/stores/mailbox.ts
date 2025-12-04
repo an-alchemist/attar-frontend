@@ -1,5 +1,5 @@
 import { supabase, type AttarMailbox } from '$lib/supabase';
-import { profile, refreshProfile, ensureValidSession, refreshSession } from './auth';
+import { profile, refreshProfile } from './auth';
 import { get } from 'svelte/store';
 
 export type SendLetterResult = {
@@ -52,18 +52,8 @@ export async function canSendLetter(): Promise<boolean> {
 	return data ?? false;
 }
 
-// Send a letter to Attar (uses RPC for atomic operation, with session validation)
+// Send a letter to Attar (uses RPC for atomic operation)
 export async function sendLetter(subject: string, content: string): Promise<SendLetterResult> {
-	// Ensure session is valid before sending
-	const sessionValid = await ensureValidSession();
-	if (!sessionValid) {
-		const refreshed = await refreshSession();
-		if (!refreshed) {
-			return { success: false, error: 'Session expired. Please refresh the page.' };
-		}
-		await refreshProfile();
-	}
-	
 	const currentProfile = get(profile);
 	if (!currentProfile) {
 		return { success: false, error: 'Not logged in' };
@@ -77,33 +67,6 @@ export async function sendLetter(subject: string, content: string): Promise<Send
 	
 	if (error) {
 		console.error('Error sending letter:', error);
-		
-		// If auth error, try refreshing and retry once
-		if (isAuthError(error)) {
-			const refreshed = await refreshSession();
-			if (refreshed) {
-				await refreshProfile();
-				const retryProfile = get(profile);
-				if (retryProfile) {
-					const { data: retryData, error: retryError } = await supabase.rpc('send_letter', {
-						p_user_id: retryProfile.user_id,
-						p_subject: subject,
-						p_content: content
-					});
-					
-					if (retryError) {
-						return { success: false, error: retryError.message };
-					}
-					
-					const retryResult = retryData as SendLetterResult;
-					if (retryResult.success) {
-						await refreshProfile();
-					}
-					return retryResult;
-				}
-			}
-		}
-		
 		return { success: false, error: error.message };
 	}
 	
@@ -117,31 +80,8 @@ export async function sendLetter(subject: string, content: string): Promise<Send
 	return result;
 }
 
-// Check if error is auth-related
-function isAuthError(error: any): boolean {
-	if (!error) return false;
-	const message = error.message?.toLowerCase() || '';
-	return (
-		message.includes('jwt') ||
-		message.includes('token') ||
-		message.includes('unauthorized') ||
-		message.includes('auth')
-	);
-}
-
-// Vote on a letter using moons (with session validation and retry)
+// Vote on a letter using moons
 export async function voteOnLetter(letterId: string, moonAmount: number): Promise<VoteResult> {
-	// Ensure session is valid before voting
-	const sessionValid = await ensureValidSession();
-	if (!sessionValid) {
-		console.warn('Session invalid before letter vote, refreshing...');
-		const refreshed = await refreshSession();
-		if (!refreshed) {
-			return { success: false, error: 'Session expired. Please refresh the page.' };
-		}
-		await refreshProfile();
-	}
-	
 	const currentProfile = get(profile);
 	if (!currentProfile) {
 		return { success: false, error: 'Not logged in' };
@@ -155,34 +95,6 @@ export async function voteOnLetter(letterId: string, moonAmount: number): Promis
 	
 	if (error) {
 		console.error('Error voting on letter:', error);
-		
-		// If auth error, try refreshing session and retry once
-		if (isAuthError(error)) {
-			console.warn('Auth error during letter vote, refreshing and retrying...');
-			const refreshed = await refreshSession();
-			if (refreshed) {
-				await refreshProfile();
-				const retryProfile = get(profile);
-				if (retryProfile) {
-					const { data: retryData, error: retryError } = await supabase.rpc('vote_on_letter', {
-						p_user_id: retryProfile.user_id,
-						p_letter_id: letterId,
-						p_moon_amount: moonAmount
-					});
-					
-					if (retryError) {
-						return { success: false, error: retryError.message };
-					}
-					
-					const retryResult = retryData as VoteResult;
-					if (retryResult.success) {
-						await refreshProfile();
-					}
-					return retryResult;
-				}
-			}
-		}
-		
 		return { success: false, error: error.message };
 	}
 	

@@ -142,7 +142,7 @@
 			<!-- Media - Full width, taller -->
 			<div class="hero-media">
 				{#if isVideo}
-					<video src={mediaUrl} autoplay loop muted playsinline class="media-element"></video>
+					<video src={mediaUrl} autoplay loop muted playsinline crossorigin="anonymous" class="media-element"></video>
 				{:else}
 					<img src={mediaUrl} alt={currentEnv.title} class="media-element" />
 				{/if}

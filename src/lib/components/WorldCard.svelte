@@ -466,6 +466,7 @@
 					loop
 					muted
 					playsinline
+					crossorigin="anonymous"
 					onloadedmetadata={handleVideoLoaded}
 					onerror={handleVideoError}
 					class="video-loop w-full h-auto block rounded"

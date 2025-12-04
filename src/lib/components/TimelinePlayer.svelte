@@ -169,6 +169,7 @@
 								loop
 								muted
 								playsinline
+								crossorigin="anonymous"
 								class="media-content"
 							/>
 						{:else if currentEntry.worldImageUrl}

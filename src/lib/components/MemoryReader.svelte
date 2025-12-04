@@ -253,6 +253,7 @@
 										loop
 										muted
 										playsinline
+										crossorigin="anonymous"
 									/>
 								{:else}
 									<img 

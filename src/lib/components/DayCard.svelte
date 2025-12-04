@@ -70,6 +70,7 @@
 					loop
 					muted
 					playsinline
+					crossorigin="anonymous"
 					class="w-full h-auto object-contain"
 					style="max-height: 60vh;"
 				></video>

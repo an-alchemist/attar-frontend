@@ -194,11 +194,11 @@
 		};
 	});
 	
-	// Dynamic page title
+	// Dynamic page title - uses backstory line
 	const pageTitle = $derived(
 		latestBackstory?.text 
-			? `Attar, ${latestBackstory.text.slice(0, 60)}${latestBackstory.text.length > 60 ? '...' : ''}`
-			: 'Attar'
+			? `Attar - ${latestBackstory.text.slice(0, 60)}${latestBackstory.text.length > 60 ? '...' : ''}`
+			: 'Attar - An Evolving Entity'
 	);
 </script>
 
@@ -207,14 +207,13 @@
 	<meta property="og:title" content={pageTitle} />
 	<meta property="og:image" content={data.ogImage} />
 	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://attar.day" />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={pageTitle} />
 	<meta name="twitter:image" content={data.ogImage} />
-	{#if latestBackstory?.text}
-		<meta property="og:description" content={latestBackstory.text} />
-		<meta name="description" content={latestBackstory.text} />
-		<meta name="twitter:description" content={latestBackstory.text} />
-	{/if}
+	<meta property="og:description" content={latestBackstory?.text || data.ogDescription} />
+	<meta name="description" content={latestBackstory?.text || data.ogDescription} />
+	<meta name="twitter:description" content={latestBackstory?.text || data.ogDescription} />
 </svelte:head>
 
 <!-- Mobile View -->

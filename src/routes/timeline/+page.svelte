@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { getTimelineEntries, type TimelineEntry } from '$lib/stores/timeline';
+	import { isMobile } from '$lib/stores/mobile';
 	import DayCard from '$lib/components/DayCard.svelte';
 	
 	let timeline = $state<TimelineEntry[]>([]);
@@ -9,6 +10,9 @@
 	let activeIndex = $state(0);
 	let containerEl = $state<HTMLElement | null>(null);
 	let showSidebar = $state(true);
+	
+	// Mobile view state: 'list' or 'detail'
+	let mobileView = $state<'list' | 'detail'>('list');
 	
 	// Get first and last day for display
 	const firstDay = $derived(timeline.length > 0 ? timeline[timeline.length - 1].day : 1);
@@ -21,6 +25,11 @@
 	});
 	
 	function goBack() {
+		// On mobile detail view, go back to list first
+		if ($isMobile && mobileView === 'detail') {
+			mobileView = 'list';
+			return;
+		}
 		goto('/');
 	}
 	
@@ -28,7 +37,13 @@
 		if (index < 0 || index >= timeline.length) return;
 		activeIndex = index;
 		
-		// Scroll the card into view
+		// On mobile, switch to detail view
+		if ($isMobile) {
+			mobileView = 'detail';
+			return;
+		}
+		
+		// Scroll the card into view (desktop)
 		const card = containerEl?.querySelector(`[data-index="${index}"]`);
 		if (card) {
 			card.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -36,7 +51,7 @@
 	}
 	
 	function handleScroll(e: Event) {
-		if (!containerEl) return;
+		if (!containerEl || $isMobile) return;
 		
 		const cards = containerEl.querySelectorAll('.day-card-wrapper');
 		const containerRect = containerEl.getBoundingClientRect();
@@ -98,11 +113,17 @@
 	<div class="top-bar">
 		<div class="top-bar-left">
 			<button onclick={goBack} class="back-btn">
-				← Back
+				{#if $isMobile && mobileView === 'detail'}
+					← List
+				{:else}
+					← Back
+				{/if}
 			</button>
-			<button onclick={toggleSidebar} class="toggle-btn" class:active={showSidebar}>
-				☰
-			</button>
+			{#if !$isMobile}
+				<button onclick={toggleSidebar} class="toggle-btn" class:active={showSidebar}>
+					☰
+				</button>
+			{/if}
 			<div class="title-section">
 				<span class="title">Timeline.att</span>
 				<span class="subtitle">{timeline.length} days</span>
@@ -115,49 +136,9 @@
 		</div>
 	</div>
 	
-	<!-- Main content area -->
-	<div class="content-area">
-		<!-- Sidebar - toggleable -->
-		{#if showSidebar}
-			<div class="sidebar">
-				<div class="sidebar-scroll">
-					{#if loading}
-						<div class="sidebar-empty">Loading...</div>
-					{:else}
-						{#each timeline as entry, idx (entry.id)}
-							<button
-								onclick={() => scrollToEntry(idx)}
-								class="sidebar-item"
-								class:active={activeIndex === idx}
-							>
-								<div 
-									class="day-badge"
-									class:active={activeIndex === idx}
-								>
-									{entry.day}
-								</div>
-								<div class="item-info">
-									<span class="item-title">{entry.title}</span>
-									{#if entry.winningChoice}
-										<span class="item-decision">→ {entry.winningChoice.title}</span>
-									{/if}
-								</div>
-								{#if entry.worldVideoUrl}
-									<span class="video-indicator">▶</span>
-								{/if}
-							</button>
-						{/each}
-					{/if}
-				</div>
-			</div>
-		{/if}
-		
-		<!-- Main scroll area -->
-		<div 
-			class="main-area"
-			bind:this={containerEl}
-			onscroll={handleScroll}
-		>
+	<!-- Mobile View -->
+	{#if $isMobile}
+		<div class="mobile-content">
 			{#if loading}
 				<div class="center-message">
 					<div class="icon">↓</div>
@@ -169,18 +150,29 @@
 					<h2>Genesis Awaits</h2>
 					<p>The timeline will begin when the first day is recorded.</p>
 				</div>
-			{:else}
-				<div class="cards-container">
+			{:else if mobileView === 'list'}
+				<!-- Mobile List View -->
+				<div class="mobile-list">
 					{#each timeline as entry, idx (entry.id)}
-						<div 
-							class="day-card-wrapper"
-							data-index={idx}
+						<button
+							onclick={() => scrollToEntry(idx)}
+							class="mobile-list-item"
 						>
-							<DayCard 
-								{entry} 
-								isActive={activeIndex === idx}
-							/>
-						</div>
+							<div class="day-badge" class:active={activeIndex === idx}>
+								{entry.day}
+							</div>
+							<div class="item-info">
+								<span class="item-title">{entry.title}</span>
+								{#if entry.winningChoice}
+									<span class="item-decision">→ {entry.winningChoice.title}</span>
+								{/if}
+							</div>
+							{#if entry.worldVideoUrl}
+								<span class="video-indicator">▶</span>
+							{:else}
+								<span class="chevron">›</span>
+							{/if}
+						</button>
 					{/each}
 					
 					<!-- Genesis marker -->
@@ -190,9 +182,112 @@
 						<p class="genesis-desc">The beginning of Attar's journey.</p>
 					</div>
 				</div>
+			{:else if mobileView === 'detail' && currentEntry}
+				<!-- Mobile Detail View -->
+				<div class="mobile-detail">
+					<DayCard entry={currentEntry} isActive={true} />
+					
+					<!-- Navigation -->
+					<div class="mobile-nav">
+						<button 
+							onclick={() => { activeIndex = Math.max(0, activeIndex - 1); }}
+							disabled={activeIndex === 0}
+							class="nav-btn"
+						>
+							← Prev
+						</button>
+						<span class="nav-indicator">{activeIndex + 1} / {timeline.length}</span>
+						<button 
+							onclick={() => { activeIndex = Math.min(timeline.length - 1, activeIndex + 1); }}
+							disabled={activeIndex === timeline.length - 1}
+							class="nav-btn"
+						>
+							Next →
+						</button>
+					</div>
+				</div>
 			{/if}
 		</div>
-	</div>
+	{:else}
+		<!-- Desktop View -->
+		<div class="content-area">
+			<!-- Sidebar - toggleable -->
+			{#if showSidebar}
+				<div class="sidebar">
+					<div class="sidebar-scroll">
+						{#if loading}
+							<div class="sidebar-empty">Loading...</div>
+						{:else}
+							{#each timeline as entry, idx (entry.id)}
+								<button
+									onclick={() => scrollToEntry(idx)}
+									class="sidebar-item"
+									class:active={activeIndex === idx}
+								>
+									<div 
+										class="day-badge"
+										class:active={activeIndex === idx}
+									>
+										{entry.day}
+									</div>
+									<div class="item-info">
+										<span class="item-title">{entry.title}</span>
+										{#if entry.winningChoice}
+											<span class="item-decision">→ {entry.winningChoice.title}</span>
+										{/if}
+									</div>
+									{#if entry.worldVideoUrl}
+										<span class="video-indicator">▶</span>
+									{/if}
+								</button>
+							{/each}
+						{/if}
+					</div>
+				</div>
+			{/if}
+			
+			<!-- Main scroll area -->
+			<div 
+				class="main-area"
+				bind:this={containerEl}
+				onscroll={handleScroll}
+			>
+				{#if loading}
+					<div class="center-message">
+						<div class="icon">↓</div>
+						<p>Loading timeline...</p>
+					</div>
+				{:else if timeline.length === 0}
+					<div class="center-message">
+						<div class="icon">◆</div>
+						<h2>Genesis Awaits</h2>
+						<p>The timeline will begin when the first day is recorded.</p>
+					</div>
+				{:else}
+					<div class="cards-container">
+						{#each timeline as entry, idx (entry.id)}
+							<div 
+								class="day-card-wrapper"
+								data-index={idx}
+							>
+								<DayCard 
+									{entry} 
+									isActive={activeIndex === idx}
+								/>
+							</div>
+						{/each}
+						
+						<!-- Genesis marker -->
+						<div class="genesis-marker">
+							<span class="genesis-icon">◆</span>
+							<span class="genesis-text">Genesis</span>
+							<p class="genesis-desc">The beginning of Attar's journey.</p>
+						</div>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -459,7 +554,7 @@
 		color: rgba(200, 230, 180, 0.3);
 	}
 	
-	/* Responsive */
+	/* Responsive - Desktop sidebar overlay (fallback) */
 	@media (max-width: 768px) {
 		.sidebar {
 			position: absolute;
@@ -473,5 +568,115 @@
 		.main-area {
 			padding: 16px;
 		}
+	}
+	
+	/* Mobile-specific styles */
+	.mobile-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	
+	.mobile-list {
+		flex: 1;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	
+	.mobile-list-item {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		width: 100%;
+		padding: 16px 20px;
+		background: transparent;
+		border: none;
+		border-bottom: 1px solid rgba(120, 110, 130, 0.15);
+		cursor: pointer;
+		text-align: left;
+		transition: background 0.15s;
+	}
+	
+	.mobile-list-item:active {
+		background: rgba(200, 230, 180, 0.08);
+	}
+	
+	.mobile-list-item .day-badge {
+		width: 44px;
+		height: 44px;
+		font-size: 14px;
+	}
+	
+	.mobile-list-item .item-info {
+		flex: 1;
+		min-width: 0;
+	}
+	
+	.mobile-list-item .item-title {
+		font-size: 14px;
+		margin-bottom: 4px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	
+	.mobile-list-item .item-decision {
+		font-size: 12px;
+	}
+	
+	.chevron {
+		font-size: 24px;
+		color: rgba(200, 230, 180, 0.3);
+		flex-shrink: 0;
+	}
+	
+	/* Mobile Detail View */
+	.mobile-detail {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	
+	.mobile-detail :global(.day-card) {
+		flex: 1;
+		overflow-y: auto;
+	}
+	
+	.mobile-nav {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 16px 20px;
+		background: rgba(0, 0, 0, 0.3);
+		border-top: 1px solid rgba(120, 110, 130, 0.2);
+		padding-bottom: max(16px, env(safe-area-inset-bottom));
+	}
+	
+	.nav-btn {
+		padding: 12px 20px;
+		font-size: 13px;
+		color: rgba(200, 230, 180, 0.8);
+		background: rgba(200, 230, 180, 0.1);
+		border: 1px solid rgba(200, 230, 180, 0.3);
+		border-radius: 8px;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+	
+	.nav-btn:disabled {
+		opacity: 0.3;
+		cursor: not-allowed;
+	}
+	
+	.nav-btn:active:not(:disabled) {
+		background: rgba(200, 230, 180, 0.2);
+		transform: scale(0.97);
+	}
+	
+	.nav-indicator {
+		font-size: 12px;
+		color: rgba(200, 230, 180, 0.5);
 	}
 </style>

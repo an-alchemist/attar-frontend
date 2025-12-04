@@ -2,6 +2,8 @@
 	import { onMount } from 'svelte';
 	import { isAuthenticated, profile, refreshProfile } from '$lib/stores/auth';
 	import { voteOnDecision } from '$lib/stores/moons';
+	import { isMobile } from '$lib/stores/mobile';
+	import MobileBottomModal from './MobileBottomModal.svelte';
 	
 	type Choice = {
 		id: string;
@@ -517,140 +519,223 @@
 	</div>
 </div>
 
-<!-- Moon Voting Popup - Matching mailbox style -->
+<!-- Moon Voting Popup -->
 {#if showPopup && selectedChoice}
-	<div 
-		class="fixed inset-0 bg-black/85 flex items-center justify-center z-50"
-		onclick={closePopup}
-		onkeydown={(e) => e.key === 'Escape' && closePopup()}
-		role="dialog"
-		tabindex="-1"
-	>
-		<div 
-			class="rounded-lg max-w-md w-full mx-4 overflow-hidden"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-			role="document"
-			style="background: linear-gradient(145deg, rgba(35, 30, 45, 0.98) 0%, rgba(20, 18, 28, 1) 100%); border: 1px solid rgba(120, 110, 130, 0.5); font-family: 'JetBrains Mono', monospace; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);"
-		>
-			<!-- Modal header -->
-			<div class="flex items-center justify-between px-4 py-3" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(120, 110, 130, 0.3);">
-				<div class="flex items-center gap-3">
-					<div class="flex items-center justify-center w-10 h-10 rounded-lg" style="background: rgba(72, 209, 204, 0.15); border: 1px solid rgba(72, 209, 204, 0.3);">
-						<span class="text-sm" style="color: rgba(72, 209, 204, 0.9);">
-							{getVotePercentage(selectedChoice.votes)}%
-						</span>
+	{#if $isMobile}
+		<!-- Mobile: Bottom sheet modal -->
+		<MobileBottomModal open={showPopup} onClose={closePopup} title={selectedChoice.title}>
+			<div class="vote-modal-content" style="font-family: 'JetBrains Mono', monospace;">
+				<!-- Choice info -->
+				<div class="vote-choice-header">
+					<div class="vote-percentage-badge">
+						{getVotePercentage(selectedChoice.votes)}%
 					</div>
-					<span style="color: rgba(200, 230, 180, 0.9);">{selectedChoice.title}</span>
+					<p class="vote-description">{selectedChoice.description}</p>
 				</div>
-				<button 
-					onclick={closePopup}
-					class="w-7 h-7 flex items-center justify-center rounded transition-colors hover:bg-white/10" 
-					style="border: 1px solid rgba(200, 230, 180, 0.3); color: rgba(200, 230, 180, 0.6);"
-				>
-					<span style="font-size: 16px;">×</span>
-				</button>
-			</div>
-			
-			<!-- Modal content -->
-			<div class="p-4">
-				<p class="text-sm leading-relaxed mb-4" style="color: rgba(200, 230, 180, 0.7);">{selectedChoice.description}</p>
 				
 				<!-- Moon voting section -->
 				{#if $isAuthenticated}
-					<div class="flex items-center justify-between mb-3">
-						<span class="text-xs" style="color: rgba(200, 230, 180, 0.6);">
-							Vote with 🌙
-						</span>
-						<span class="text-xs" style="color: rgba(200, 230, 180, 0.4);">
-							Balance: {$profile?.available_moons ?? 0}
-						</span>
-					</div>
-					
-					<div class="flex items-center gap-2 mb-3">
-						{#each moonOptions as amount}
-							<button
-								onclick={() => selectMoons(amount)}
-								disabled={voting || ($profile && $profile.available_moons < amount)}
-								class="flex-1 py-2 rounded text-xs transition-all"
-								style="
-									background: {selectedMoons === amount ? 'rgba(200, 230, 180, 0.25)' : 'rgba(0,0,0,0.2)'};
-									border: 1px solid {selectedMoons === amount ? 'rgba(200, 230, 180, 0.5)' : 'rgba(120, 110, 130, 0.3)'};
-									color: {$profile && $profile.available_moons < amount ? 'rgba(200, 230, 180, 0.3)' : 'rgba(200, 230, 180, 0.8)'};
-									cursor: {$profile && $profile.available_moons < amount ? 'not-allowed' : 'pointer'};
-								"
-							>
-								{amount} 🌙
-							</button>
-						{/each}
-						<input
-							type="number"
-							bind:value={customMoonAmount}
-							oninput={handleCustomInput}
-							placeholder="?"
-							min="1"
-							max={$profile?.available_moons ?? 0}
-							disabled={voting}
-							class="w-14 py-2 px-2 rounded text-xs text-center outline-none"
-							style="
-								background: {customMoonAmount ? 'rgba(200, 230, 180, 0.15)' : 'rgba(0,0,0,0.2)'};
-								border: 1px solid {customMoonAmount ? 'rgba(200, 230, 180, 0.5)' : 'rgba(120, 110, 130, 0.3)'};
-								color: rgba(200, 230, 180, 0.8);
-							"
-						/>
-					</div>
-					
-					{#if voteError}
-						<div class="text-xs mb-2" style="color: rgba(255, 150, 150, 0.9);">{voteError}</div>
-					{/if}
-					{#if voteSuccess}
-						<div class="text-xs mb-2" style="color: rgba(150, 255, 150, 0.9);">{voteSuccess}</div>
-					{/if}
-					
-					<div class="flex gap-2">
-						<button
-							onclick={closePopup}
-							disabled={voting}
-							class="flex-1 py-2.5 rounded text-sm transition-all"
-							style="border: 1px solid rgba(200, 230, 180, 0.3); color: rgba(200, 230, 180, 0.7);"
-						>
-							Cancel
-						</button>
-						{#if selectedMoons > 0}
-							<button
-								onclick={handleVote}
-								disabled={voting || !$profile || $profile.available_moons < selectedMoons}
-								class="flex-1 py-2.5 rounded text-sm transition-all"
-								style="
-									background: rgba(200, 230, 180, 0.2);
-									color: rgba(200, 230, 180, 0.9);
-									border: 1px solid rgba(200, 230, 180, 0.4);
-									opacity: {voting ? 0.6 : 1};
-								"
-							>
-								{#if voting}
-									Voting...
-								{:else}
-									Vote {selectedMoons} 🌙
-								{/if}
-							</button>
+					<div class="vote-section">
+						<div class="vote-balance-row">
+							<span>Vote with 🌙</span>
+							<span class="balance">Balance: {$profile?.available_moons ?? 0}</span>
+						</div>
+						
+						<div class="vote-buttons">
+							{#each moonOptions as amount}
+								<button
+									onclick={() => selectMoons(amount)}
+									disabled={voting || ($profile && $profile.available_moons < amount)}
+									class="vote-amount-btn"
+									class:selected={selectedMoons === amount}
+									class:disabled={$profile && $profile.available_moons < amount}
+								>
+									{amount} 🌙
+								</button>
+							{/each}
+							<input
+								type="number"
+								bind:value={customMoonAmount}
+								oninput={handleCustomInput}
+								placeholder="?"
+								min="1"
+								max={$profile?.available_moons ?? 0}
+								disabled={voting}
+								class="vote-custom-input"
+								class:has-value={customMoonAmount}
+							/>
+						</div>
+						
+						{#if voteError}
+							<div class="vote-error">{voteError}</div>
 						{/if}
+						{#if voteSuccess}
+							<div class="vote-success">{voteSuccess}</div>
+						{/if}
+						
+						<div class="vote-actions">
+							<button onclick={closePopup} disabled={voting} class="vote-cancel-btn">
+								Cancel
+							</button>
+							{#if selectedMoons > 0}
+								<button
+									onclick={handleVote}
+									disabled={voting || !$profile || $profile.available_moons < selectedMoons}
+									class="vote-submit-btn"
+									class:voting={voting}
+								>
+									{#if voting}
+										Voting...
+									{:else}
+										Vote {selectedMoons} 🌙
+									{/if}
+								</button>
+							{/if}
+						</div>
 					</div>
 				{:else}
-					<div class="text-xs text-center py-4" style="color: rgba(200, 230, 180, 0.5);">
-						Log in to vote on decisions
+					<div class="vote-login-prompt">
+						<p>Log in to vote on decisions</p>
+						<button onclick={closePopup} class="vote-cancel-btn full">Close</button>
 					</div>
-					<button
-						onclick={closePopup}
-						class="w-full py-2.5 rounded text-sm transition-all"
-						style="border: 1px solid rgba(200, 230, 180, 0.3); color: rgba(200, 230, 180, 0.7);"
-					>
-						Close
-					</button>
 				{/if}
 			</div>
+		</MobileBottomModal>
+	{:else}
+		<!-- Desktop: Centered modal -->
+		<div 
+			class="fixed inset-0 bg-black/85 flex items-center justify-center z-50"
+			onclick={closePopup}
+			onkeydown={(e) => e.key === 'Escape' && closePopup()}
+			role="dialog"
+			tabindex="-1"
+		>
+			<div 
+				class="rounded-lg max-w-md w-full mx-4 overflow-hidden"
+				onclick={(e) => e.stopPropagation()}
+				onkeydown={(e) => e.stopPropagation()}
+				role="document"
+				style="background: linear-gradient(145deg, rgba(35, 30, 45, 0.98) 0%, rgba(20, 18, 28, 1) 100%); border: 1px solid rgba(120, 110, 130, 0.5); font-family: 'JetBrains Mono', monospace; box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);"
+			>
+				<!-- Modal header -->
+				<div class="flex items-center justify-between px-4 py-3" style="background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(120, 110, 130, 0.3);">
+					<div class="flex items-center gap-3">
+						<div class="flex items-center justify-center w-10 h-10 rounded-lg" style="background: rgba(72, 209, 204, 0.15); border: 1px solid rgba(72, 209, 204, 0.3);">
+							<span class="text-sm" style="color: rgba(72, 209, 204, 0.9);">
+								{getVotePercentage(selectedChoice.votes)}%
+							</span>
+						</div>
+						<span style="color: rgba(200, 230, 180, 0.9);">{selectedChoice.title}</span>
+					</div>
+					<button 
+						onclick={closePopup}
+						class="w-7 h-7 flex items-center justify-center rounded transition-colors hover:bg-white/10" 
+						style="border: 1px solid rgba(200, 230, 180, 0.3); color: rgba(200, 230, 180, 0.6);"
+					>
+						<span style="font-size: 16px;">×</span>
+					</button>
+				</div>
+				
+				<!-- Modal content -->
+				<div class="p-4">
+					<p class="text-sm leading-relaxed mb-4" style="color: rgba(200, 230, 180, 0.7);">{selectedChoice.description}</p>
+					
+					<!-- Moon voting section -->
+					{#if $isAuthenticated}
+						<div class="flex items-center justify-between mb-3">
+							<span class="text-xs" style="color: rgba(200, 230, 180, 0.6);">
+								Vote with 🌙
+							</span>
+							<span class="text-xs" style="color: rgba(200, 230, 180, 0.4);">
+								Balance: {$profile?.available_moons ?? 0}
+							</span>
+						</div>
+						
+						<div class="flex items-center gap-2 mb-3">
+							{#each moonOptions as amount}
+								<button
+									onclick={() => selectMoons(amount)}
+									disabled={voting || ($profile && $profile.available_moons < amount)}
+									class="flex-1 py-2 rounded text-xs transition-all"
+									style="
+										background: {selectedMoons === amount ? 'rgba(200, 230, 180, 0.25)' : 'rgba(0,0,0,0.2)'};
+										border: 1px solid {selectedMoons === amount ? 'rgba(200, 230, 180, 0.5)' : 'rgba(120, 110, 130, 0.3)'};
+										color: {$profile && $profile.available_moons < amount ? 'rgba(200, 230, 180, 0.3)' : 'rgba(200, 230, 180, 0.8)'};
+										cursor: {$profile && $profile.available_moons < amount ? 'not-allowed' : 'pointer'};
+									"
+								>
+									{amount} 🌙
+								</button>
+							{/each}
+							<input
+								type="number"
+								bind:value={customMoonAmount}
+								oninput={handleCustomInput}
+								placeholder="?"
+								min="1"
+								max={$profile?.available_moons ?? 0}
+								disabled={voting}
+								class="w-14 py-2 px-2 rounded text-xs text-center outline-none"
+								style="
+									background: {customMoonAmount ? 'rgba(200, 230, 180, 0.15)' : 'rgba(0,0,0,0.2)'};
+									border: 1px solid {customMoonAmount ? 'rgba(200, 230, 180, 0.5)' : 'rgba(120, 110, 130, 0.3)'};
+									color: rgba(200, 230, 180, 0.8);
+								"
+							/>
+						</div>
+						
+						{#if voteError}
+							<div class="text-xs mb-2" style="color: rgba(255, 150, 150, 0.9);">{voteError}</div>
+						{/if}
+						{#if voteSuccess}
+							<div class="text-xs mb-2" style="color: rgba(150, 255, 150, 0.9);">{voteSuccess}</div>
+						{/if}
+						
+						<div class="flex gap-2">
+							<button
+								onclick={closePopup}
+								disabled={voting}
+								class="flex-1 py-2.5 rounded text-sm transition-all"
+								style="border: 1px solid rgba(200, 230, 180, 0.3); color: rgba(200, 230, 180, 0.7);"
+							>
+								Cancel
+							</button>
+							{#if selectedMoons > 0}
+								<button
+									onclick={handleVote}
+									disabled={voting || !$profile || $profile.available_moons < selectedMoons}
+									class="flex-1 py-2.5 rounded text-sm transition-all"
+									style="
+										background: rgba(200, 230, 180, 0.2);
+										color: rgba(200, 230, 180, 0.9);
+										border: 1px solid rgba(200, 230, 180, 0.4);
+										opacity: {voting ? 0.6 : 1};
+									"
+								>
+									{#if voting}
+										Voting...
+									{:else}
+										Vote {selectedMoons} 🌙
+									{/if}
+								</button>
+							{/if}
+						</div>
+					{:else}
+						<div class="text-xs text-center py-4" style="color: rgba(200, 230, 180, 0.5);">
+							Log in to vote on decisions
+						</div>
+						<button
+							onclick={closePopup}
+							class="w-full py-2.5 rounded text-sm transition-all"
+							style="border: 1px solid rgba(200, 230, 180, 0.3); color: rgba(200, 230, 180, 0.7);"
+						>
+							Close
+						</button>
+					{/if}
+				</div>
+			</div>
 		</div>
-	</div>
+	{/if}
 {/if}
 
 <style>
@@ -769,5 +854,188 @@
 			min-height: 44px;
 			min-width: 44px;
 		}
+	}
+	
+	/* Mobile vote modal styles */
+	.vote-modal-content {
+		padding: 20px;
+	}
+	
+	.vote-choice-header {
+		display: flex;
+		align-items: flex-start;
+		gap: 16px;
+		margin-bottom: 24px;
+		padding-bottom: 16px;
+		border-bottom: 1px solid rgba(120, 110, 130, 0.2);
+	}
+	
+	.vote-percentage-badge {
+		width: 56px;
+		height: 56px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 12px;
+		font-size: 16px;
+		background: rgba(72, 209, 204, 0.15);
+		border: 1px solid rgba(72, 209, 204, 0.3);
+		color: rgba(72, 209, 204, 0.9);
+		flex-shrink: 0;
+	}
+	
+	.vote-description {
+		font-size: 14px;
+		line-height: 1.5;
+		color: rgba(200, 230, 180, 0.7);
+		margin: 0;
+	}
+	
+	.vote-section {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	
+	.vote-balance-row {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: 13px;
+		color: rgba(200, 230, 180, 0.6);
+	}
+	
+	.vote-balance-row .balance {
+		color: rgba(200, 230, 180, 0.4);
+	}
+	
+	.vote-buttons {
+		display: flex;
+		gap: 10px;
+	}
+	
+	.vote-amount-btn {
+		flex: 1;
+		padding: 14px 8px;
+		border-radius: 10px;
+		font-size: 14px;
+		background: rgba(0, 0, 0, 0.2);
+		border: 1px solid rgba(120, 110, 130, 0.3);
+		color: rgba(200, 230, 180, 0.8);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+	
+	.vote-amount-btn.selected {
+		background: rgba(200, 230, 180, 0.25);
+		border-color: rgba(200, 230, 180, 0.5);
+	}
+	
+	.vote-amount-btn.disabled {
+		color: rgba(200, 230, 180, 0.3);
+		cursor: not-allowed;
+	}
+	
+	.vote-amount-btn:active:not(.disabled) {
+		transform: scale(0.97);
+	}
+	
+	.vote-custom-input {
+		width: 64px;
+		padding: 14px 8px;
+		border-radius: 10px;
+		font-size: 14px;
+		text-align: center;
+		background: rgba(0, 0, 0, 0.2);
+		border: 1px solid rgba(120, 110, 130, 0.3);
+		color: rgba(200, 230, 180, 0.8);
+		outline: none;
+		-moz-appearance: textfield;
+	}
+	
+	.vote-custom-input::-webkit-inner-spin-button,
+	.vote-custom-input::-webkit-outer-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+	
+	.vote-custom-input.has-value {
+		background: rgba(200, 230, 180, 0.15);
+		border-color: rgba(200, 230, 180, 0.5);
+	}
+	
+	.vote-error {
+		font-size: 13px;
+		color: rgba(255, 150, 150, 0.9);
+		padding: 8px 12px;
+		background: rgba(255, 100, 100, 0.1);
+		border-radius: 8px;
+	}
+	
+	.vote-success {
+		font-size: 13px;
+		color: rgba(150, 255, 150, 0.9);
+		padding: 8px 12px;
+		background: rgba(100, 255, 100, 0.1);
+		border-radius: 8px;
+	}
+	
+	.vote-actions {
+		display: flex;
+		gap: 12px;
+		margin-top: 8px;
+	}
+	
+	.vote-cancel-btn {
+		flex: 1;
+		padding: 16px;
+		border-radius: 12px;
+		font-size: 15px;
+		background: transparent;
+		border: 1px solid rgba(200, 230, 180, 0.3);
+		color: rgba(200, 230, 180, 0.7);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+	
+	.vote-cancel-btn.full {
+		margin-top: 16px;
+	}
+	
+	.vote-cancel-btn:active {
+		background: rgba(200, 230, 180, 0.1);
+		transform: scale(0.98);
+	}
+	
+	.vote-submit-btn {
+		flex: 1;
+		padding: 16px;
+		border-radius: 12px;
+		font-size: 15px;
+		background: rgba(200, 230, 180, 0.2);
+		border: 1px solid rgba(200, 230, 180, 0.4);
+		color: rgba(200, 230, 180, 0.9);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+	
+	.vote-submit-btn.voting {
+		opacity: 0.6;
+	}
+	
+	.vote-submit-btn:active:not(.voting) {
+		background: rgba(200, 230, 180, 0.3);
+		transform: scale(0.98);
+	}
+	
+	.vote-login-prompt {
+		text-align: center;
+		padding: 24px 0;
+	}
+	
+	.vote-login-prompt p {
+		font-size: 14px;
+		color: rgba(200, 230, 180, 0.5);
+		margin: 0 0 20px 0;
 	}
 </style>

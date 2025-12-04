@@ -19,10 +19,16 @@ export async function load() {
 	
 	const metadata = latestEnv?.metadata as { title?: string; day?: number } || {};
 	
+	// Ensure OG image is absolute URL
+	let ogImage = latestEnv?.world_image_url || 'https://attar.day/worlds/be.png';
+	if (ogImage && !ogImage.startsWith('http')) {
+		ogImage = `https://attar.day${ogImage.startsWith('/') ? '' : '/'}${ogImage}`;
+	}
+	
 	return {
-		ogImage: latestEnv?.world_image_url || '/og-image.png',
-		ogTitle: metadata.title ? `Attar - ${metadata.title}` : 'Attar',
-		ogDescription: latestBackstory?.sentence || 'An evolving digital consciousness shaped by collective choices.',
+		ogImage,
+		ogTitle: metadata.title ? `Attar - ${metadata.title}` : 'Attar - An Evolving Entity',
+		ogDescription: latestBackstory?.sentence || 'A collaborative experiment where collective choices shape the evolution of a digital being.',
 		currentDay: metadata.day || 1
 	};
 }

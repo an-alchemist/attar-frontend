@@ -3,11 +3,15 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { getMemories, type MemoryEntry } from '$lib/stores/memory';
+	import { isMobile } from '$lib/stores/mobile';
 	
 	let memories = $state<MemoryEntry[]>([]);
 	let loading = $state(true);
 	let selectedId = $state<string | null>(null);
 	let showSidebar = $state(true);
+	
+	// Mobile view state: 'list' or 'detail'
+	let mobileView = $state<'list' | 'detail'>('list');
 	
 	const selectedMemory = $derived(memories.find(m => m.id === selectedId) || null);
 	
@@ -42,20 +46,28 @@
 		const urlSelectedId = $page.url.searchParams.get('selected');
 		if (urlSelectedId && memories.some(m => m.id === urlSelectedId)) {
 			selectedId = urlSelectedId;
-		} else if (memories.length > 0) {
-			// Auto-select first memory if available
+			if ($isMobile) mobileView = 'detail';
+		} else if (memories.length > 0 && !$isMobile) {
+			// Auto-select first memory if available (desktop only)
 			selectedId = memories[0].id;
 		}
 	});
 	
 	function goBack() {
+		// On mobile detail view, go back to list first
+		if ($isMobile && mobileView === 'detail') {
+			mobileView = 'list';
+			return;
+		}
 		goto('/');
 	}
 	
 	function selectMemory(memory: MemoryEntry) {
 		selectedId = memory.id;
-		// On mobile, hide sidebar after selection
-		if (window.innerWidth < 768) {
+		// On mobile, switch to detail view
+		if ($isMobile) {
+			mobileView = 'detail';
+		} else if (window.innerWidth < 768) {
 			showSidebar = false;
 		}
 	}
@@ -85,11 +97,17 @@
 	<div class="top-bar">
 		<div class="top-bar-left">
 			<button onclick={goBack} class="back-btn">
-				← Back
+				{#if $isMobile && mobileView === 'detail'}
+					← List
+				{:else}
+					← Back
+				{/if}
 			</button>
-			<button onclick={toggleSidebar} class="toggle-btn" class:active={showSidebar}>
-				☰
-			</button>
+			{#if !$isMobile}
+				<button onclick={toggleSidebar} class="toggle-btn" class:active={showSidebar}>
+					☰
+				</button>
+			{/if}
 			<div class="title-section">
 				<span class="title">Memory.att</span>
 				<span class="subtitle">{memories.length} days recorded</span>
@@ -98,57 +116,11 @@
 		<div class="top-bar-right">
 			<span class="archive-badge">Full Archive</span>
 		</div>
-		</div>
+	</div>
 
-	<!-- Main content area -->
-	<div class="content-area">
-		<!-- Sidebar - toggleable -->
-		{#if showSidebar}
-			<div class="sidebar">
-				<div class="sidebar-scroll">
-					{#if loading}
-						<div class="sidebar-empty">Loading...</div>
-					{:else if memories.length === 0}
-						<div class="sidebar-empty">
-							<span class="empty-icon">◈</span>
-							<span>No memories yet</span>
-						</div>
-					{:else}
-						{#each memories as memory (memory.id)}
-			<button
-								onclick={() => selectMemory(memory)}
-								class="sidebar-item"
-								class:active={selectedId === memory.id}
-							>
-								<div 
-									class="day-badge"
-									style="background: {getColorForDay(memory.day)};"
-								>
-									{memory.day}
-								</div>
-								<div class="item-info">
-									<span class="item-title">{memory.envTitle || `Day ${memory.day}`}</span>
-									{#if memory.identity}
-										<span class="item-preview">{memory.identity.slice(0, 40)}...</span>
-									{/if}
-									<div class="item-meta">
-										{#if memory.newKnowledge.length > 0}
-											<span>⬡ {memory.newKnowledge.length}</span>
-										{/if}
-										{#if memory.interactions.length > 0}
-											<span>◇ {memory.interactions.length}</span>
-										{/if}
-									</div>
-								</div>
-							</button>
-						{/each}
-					{/if}
-				</div>
-			</div>
-		{/if}
-		
-		<!-- Main content -->
-		<div class="main-area">
+	<!-- Mobile View -->
+	{#if $isMobile}
+		<div class="mobile-content">
 			{#if loading}
 				<div class="center-message">
 					<div class="icon">◈</div>
@@ -159,14 +131,44 @@
 					<div class="icon">◈</div>
 					<h2>No memories yet</h2>
 					<p>The memory archive will begin when the entity starts recording its experiences.</p>
-					<button onclick={goBack} class="cta-btn">
-				← Return to World
-			</button>
+					<button onclick={goBack} class="cta-btn">← Return to World</button>
 				</div>
-			{:else if selectedMemory}
-				<div class="memory-view">
-					<!-- Memory header -->
-					<div class="memory-header">
+			{:else if mobileView === 'list'}
+				<!-- Mobile List View -->
+				<div class="mobile-list">
+					{#each memories as memory (memory.id)}
+						<button
+							onclick={() => selectMemory(memory)}
+							class="mobile-list-item"
+						>
+							<div 
+								class="day-badge"
+								style="background: {getColorForDay(memory.day)};"
+							>
+								{memory.day}
+							</div>
+							<div class="item-info">
+								<span class="item-title">{memory.envTitle || `Day ${memory.day}`}</span>
+								{#if memory.identity}
+									<span class="item-preview">{memory.identity.slice(0, 50)}...</span>
+								{/if}
+								<div class="item-meta">
+									{#if memory.newKnowledge.length > 0}
+										<span>⬡ {memory.newKnowledge.length}</span>
+									{/if}
+									{#if memory.interactions.length > 0}
+										<span>◇ {memory.interactions.length}</span>
+									{/if}
+								</div>
+							</div>
+							<span class="chevron">›</span>
+						</button>
+					{/each}
+				</div>
+			{:else if mobileView === 'detail' && selectedMemory}
+				<!-- Mobile Detail View -->
+				<div class="mobile-detail">
+					<div class="mobile-detail-header">
 						<div 
 							class="memory-badge"
 							style="background: {getColorForDay(selectedMemory.day)};"
@@ -181,8 +183,7 @@
 						</div>
 					</div>
 					
-					<!-- Memory content -->
-					<div class="memory-content">
+					<div class="mobile-detail-content">
 						<!-- Identity Section -->
 						{#if selectedMemory.identity}
 							<div class="section">
@@ -251,13 +252,7 @@
 								{#if selectedMemory.envImageUrl}
 									<div class="env-image">
 										{#if selectedMemory.envVideoUrl}
-											<video 
-												src={selectedMemory.envVideoUrl} 
-												autoplay 
-												loop 
-												muted 
-												playsinline
-											/>
+											<video src={selectedMemory.envVideoUrl} autoplay loop muted playsinline />
 										{:else}
 											<img src={selectedMemory.envImageUrl} alt="World state" />
 										{/if}
@@ -270,14 +265,180 @@
 						{/if}
 					</div>
 				</div>
-			{:else}
-				<div class="center-message">
-					<div class="icon">◈</div>
-					<p>Select a memory to explore</p>
-				</div>
 			{/if}
 		</div>
-	</div>
+	{:else}
+		<!-- Desktop View -->
+		<div class="content-area">
+			<!-- Sidebar - toggleable -->
+			{#if showSidebar}
+				<div class="sidebar">
+					<div class="sidebar-scroll">
+						{#if loading}
+							<div class="sidebar-empty">Loading...</div>
+						{:else if memories.length === 0}
+							<div class="sidebar-empty">
+								<span class="empty-icon">◈</span>
+								<span>No memories yet</span>
+							</div>
+						{:else}
+							{#each memories as memory (memory.id)}
+								<button
+									onclick={() => selectMemory(memory)}
+									class="sidebar-item"
+									class:active={selectedId === memory.id}
+								>
+									<div 
+										class="day-badge"
+										style="background: {getColorForDay(memory.day)};"
+									>
+										{memory.day}
+									</div>
+									<div class="item-info">
+										<span class="item-title">{memory.envTitle || `Day ${memory.day}`}</span>
+										{#if memory.identity}
+											<span class="item-preview">{memory.identity.slice(0, 40)}...</span>
+										{/if}
+										<div class="item-meta">
+											{#if memory.newKnowledge.length > 0}
+												<span>⬡ {memory.newKnowledge.length}</span>
+											{/if}
+											{#if memory.interactions.length > 0}
+												<span>◇ {memory.interactions.length}</span>
+											{/if}
+										</div>
+									</div>
+								</button>
+							{/each}
+						{/if}
+					</div>
+				</div>
+			{/if}
+			
+			<!-- Main content -->
+			<div class="main-area">
+				{#if loading}
+					<div class="center-message">
+						<div class="icon">◈</div>
+						<p>Loading memories...</p>
+					</div>
+				{:else if memories.length === 0}
+					<div class="center-message">
+						<div class="icon">◈</div>
+						<h2>No memories yet</h2>
+						<p>The memory archive will begin when the entity starts recording its experiences.</p>
+						<button onclick={goBack} class="cta-btn">← Return to World</button>
+					</div>
+				{:else if selectedMemory}
+					<div class="memory-view">
+						<!-- Memory header -->
+						<div class="memory-header">
+							<div 
+								class="memory-badge"
+								style="background: {getColorForDay(selectedMemory.day)};"
+							>
+								{selectedMemory.day}
+							</div>
+							<div class="memory-info">
+								<h2>{selectedMemory.envTitle || `Day ${selectedMemory.day}`}</h2>
+								<span class="memory-meta">
+									{getThemeCount(selectedMemory)} themes · {getIdeaCount(selectedMemory)} ideas · {selectedMemory.interactions.length} voices
+								</span>
+							</div>
+						</div>
+						
+						<!-- Memory content -->
+						<div class="memory-content">
+							<!-- Identity Section -->
+							{#if selectedMemory.identity}
+								<div class="section">
+									<div class="section-header">
+										<span class="section-icon" style="color: rgba(147, 112, 219, 0.8);">◈</span>
+										<span>Identity</span>
+									</div>
+									<p class="identity-text">"{selectedMemory.identity}"</p>
+								</div>
+							{/if}
+							
+							<!-- Themes Section -->
+							{#if selectedMemory.newKnowledge.filter(k => k.type === 'theme').length > 0}
+								{@const themes = selectedMemory.newKnowledge.filter(k => k.type === 'theme')}
+								<div class="section">
+									<div class="section-header">
+										<span class="section-icon" style="color: rgba(100, 149, 237, 0.8);">⬡</span>
+										<span>Themes Learned</span>
+									</div>
+									<div class="tags">
+										{#each themes as theme}
+											<span class="tag knowledge">{theme.value}</span>
+										{/each}
+									</div>
+								</div>
+							{/if}
+							
+							<!-- Ideas Section -->
+							{#if selectedMemory.newKnowledge.filter(k => k.type === 'idea').length > 0}
+								{@const ideas = selectedMemory.newKnowledge.filter(k => k.type === 'idea')}
+								<div class="section">
+									<div class="section-header">
+										<span class="section-icon" style="color: rgba(255, 218, 185, 0.8);">✦</span>
+										<span>Ideas Absorbed</span>
+									</div>
+									<div class="ideas-list">
+										{#each ideas as idea}
+											<div class="idea-item">"{idea.value}"</div>
+										{/each}
+									</div>
+								</div>
+							{/if}
+							
+							<!-- Interactions Section (Pseudonyms) -->
+							{#if selectedMemory.interactions.length > 0}
+								<div class="section">
+									<div class="section-header">
+										<span class="section-icon" style="color: rgba(72, 209, 204, 0.8);">◇</span>
+										<span>Voices Heard ({selectedMemory.interactions.length})</span>
+									</div>
+									<div class="tags">
+										{#each selectedMemory.interactions as pseudonym}
+											<span class="tag person">{pseudonym}</span>
+										{/each}
+									</div>
+								</div>
+							{/if}
+							
+							<!-- Environment Section -->
+							{#if selectedMemory.envImageUrl || selectedMemory.envDescription}
+								<div class="section">
+									<div class="section-header">
+										<span class="section-icon" style="color: rgba(255, 182, 193, 0.8);">◐</span>
+										<span>World State</span>
+									</div>
+									{#if selectedMemory.envImageUrl}
+										<div class="env-image">
+											{#if selectedMemory.envVideoUrl}
+												<video src={selectedMemory.envVideoUrl} autoplay loop muted playsinline />
+											{:else}
+												<img src={selectedMemory.envImageUrl} alt="World state" />
+											{/if}
+										</div>
+									{/if}
+									{#if selectedMemory.envDescription}
+										<p class="env-desc">{selectedMemory.envDescription}</p>
+									{/if}
+								</div>
+							{/if}
+						</div>
+					</div>
+				{:else}
+					<div class="center-message">
+						<div class="icon">◈</div>
+						<p>Select a memory to explore</p>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -677,7 +838,7 @@
 		color: rgba(200, 230, 180, 0.7);
 	}
 	
-	/* Responsive */
+	/* Responsive - Desktop sidebar overlay (fallback) */
 	@media (max-width: 768px) {
 		.sidebar {
 			position: absolute;
@@ -695,5 +856,127 @@
 		.memory-content {
 			padding: 16px;
 		}
+	}
+	
+	/* Mobile-specific styles */
+	.mobile-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	
+	.mobile-list {
+		flex: 1;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	
+	.mobile-list-item {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		width: 100%;
+		padding: 16px 20px;
+		background: transparent;
+		border: none;
+		border-bottom: 1px solid rgba(120, 110, 130, 0.15);
+		cursor: pointer;
+		text-align: left;
+		transition: background 0.15s;
+	}
+	
+	.mobile-list-item:active {
+		background: rgba(147, 112, 219, 0.08);
+	}
+	
+	.mobile-list-item .day-badge {
+		width: 44px;
+		height: 44px;
+		font-size: 14px;
+	}
+	
+	.mobile-list-item .item-info {
+		flex: 1;
+		min-width: 0;
+	}
+	
+	.mobile-list-item .item-title {
+		font-size: 14px;
+		margin-bottom: 4px;
+	}
+	
+	.mobile-list-item .item-preview {
+		font-size: 12px;
+		-webkit-line-clamp: 2;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	
+	.mobile-list-item .item-meta {
+		margin-top: 6px;
+	}
+	
+	.chevron {
+		font-size: 24px;
+		color: rgba(200, 230, 180, 0.3);
+		flex-shrink: 0;
+	}
+	
+	/* Mobile Detail View */
+	.mobile-detail {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	
+	.mobile-detail-header {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 16px 20px;
+		background: linear-gradient(180deg, rgba(147, 112, 219, 0.1) 0%, transparent 100%);
+		border-bottom: 1px solid rgba(120, 110, 130, 0.2);
+	}
+	
+	.mobile-detail-header .memory-badge {
+		width: 52px;
+		height: 52px;
+		font-size: 18px;
+	}
+	
+	.mobile-detail-header .memory-info h2 {
+		font-size: 16px;
+		margin-bottom: 4px;
+	}
+	
+	.mobile-detail-header .memory-meta {
+		font-size: 11px;
+	}
+	
+	.mobile-detail-content {
+		flex: 1;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		padding: 20px;
+	}
+	
+	.mobile-detail-content .section {
+		padding-bottom: 20px;
+		margin-bottom: 20px;
+		border-bottom: 1px solid rgba(120, 110, 130, 0.15);
+	}
+	
+	.mobile-detail-content .section:last-child {
+		border-bottom: none;
+		margin-bottom: 0;
+		padding-bottom: 0;
+	}
+	
+	.mobile-detail-content .env-image {
+		height: auto;
+		max-height: 200px;
 	}
 </style>

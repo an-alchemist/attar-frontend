@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { getPublishedLetters, voteOnLetter } from '$lib/stores/mailbox';
 	import { profile } from '$lib/stores/auth';
+	import { isMobile } from '$lib/stores/mobile';
 	import type { AttarMailbox } from '$lib/supabase';
 	import MoonVoter from '$lib/components/MoonVoter.svelte';
 	
@@ -11,18 +12,26 @@
 	let selectedId = $state<string | null>(null);
 	let showSidebar = $state(true);
 	
+	// Mobile view state: 'list' or 'detail'
+	let mobileView = $state<'list' | 'detail'>('list');
+	
 	const selectedLetter = $derived(letters.find(l => l.id === selectedId) || null);
 	
 	onMount(async () => {
 		letters = await getPublishedLetters(50);
 		loading = false;
-		// Auto-select first letter if available
-		if (letters.length > 0) {
+		// Auto-select first letter if available (desktop only)
+		if (letters.length > 0 && !$isMobile) {
 			selectedId = letters[0].id;
 		}
 	});
 	
 	function goBack() {
+		// On mobile detail view, go back to list first
+		if ($isMobile && mobileView === 'detail') {
+			mobileView = 'list';
+			return;
+		}
 		goto('/');
 	}
 	
@@ -32,8 +41,10 @@
 	
 	function selectLetter(letter: AttarMailbox) {
 		selectedId = letter.id;
-		// On mobile, hide sidebar after selection
-		if (window.innerWidth < 768) {
+		// On mobile, switch to detail view
+		if ($isMobile) {
+			mobileView = 'detail';
+		} else if (window.innerWidth < 768) {
 			showSidebar = false;
 		}
 	}
@@ -93,11 +104,17 @@
 	<div class="top-bar">
 		<div class="top-bar-left">
 			<button onclick={goBack} class="back-btn">
-				← Back
+				{#if $isMobile && mobileView === 'detail'}
+					← List
+				{:else}
+					← Back
+				{/if}
 			</button>
-			<button onclick={toggleSidebar} class="toggle-btn" class:active={showSidebar}>
-				☰
-			</button>
+			{#if !$isMobile}
+				<button onclick={toggleSidebar} class="toggle-btn" class:active={showSidebar}>
+					☰
+				</button>
+			{/if}
 			<div class="title-section">
 				<span class="title">Mailbox.att</span>
 				<span class="subtitle">{letters.length} letters</span>
@@ -111,48 +128,11 @@
 				✉ Write
 			</button>
 		</div>
-		</div>
+	</div>
 		
-	<!-- Main content area -->
-	<div class="content-area">
-		<!-- Sidebar - toggleable -->
-		{#if showSidebar}
-			<div class="sidebar">
-				<div class="sidebar-scroll">
-					{#if loading}
-						<div class="sidebar-empty">Loading...</div>
-					{:else if letters.length === 0}
-						<div class="sidebar-empty">
-							<span class="empty-icon">📭</span>
-							<span>No letters yet</span>
-						</div>
-					{:else}
-						{#each letters as letter (letter.id)}
-							<button
-								onclick={() => selectLetter(letter)}
-								class="sidebar-item"
-								class:active={selectedId === letter.id}
-							>
-								<div class="moon-badge">
-									{letter.received_moons > 99 ? '99+' : letter.received_moons}
-								</div>
-								<div class="item-info">
-									<span class="item-title">{letter.subject}</span>
-									<span class="item-preview">{letter.content.slice(0, 40)}...</span>
-									<div class="item-meta">
-										<span>{formatDate(letter.created_at)}</span>
-										<span>🌙 {letter.received_moons}</span>
-									</div>
-								</div>
-							</button>
-						{/each}
-					{/if}
-				</div>
-			</div>
-		{/if}
-		
-		<!-- Main content -->
-		<div class="main-area">
+	<!-- Mobile View -->
+	{#if $isMobile}
+		<div class="mobile-content">
 			{#if loading}
 				<div class="center-message">
 					<div class="icon">📬</div>
@@ -167,10 +147,33 @@
 						✉ Write First Letter
 					</button>
 				</div>
-			{:else if selectedLetter}
-				<div class="letter-view">
-					<!-- Letter header -->
-					<div class="letter-header">
+			{:else if mobileView === 'list'}
+				<!-- Mobile List View -->
+				<div class="mobile-list">
+					{#each letters as letter (letter.id)}
+						<button
+							onclick={() => selectLetter(letter)}
+							class="mobile-list-item"
+						>
+							<div class="moon-badge">
+								{letter.received_moons > 99 ? '99+' : letter.received_moons}
+							</div>
+							<div class="item-info">
+								<span class="item-title">{letter.subject}</span>
+								<span class="item-preview">{letter.content.slice(0, 50)}...</span>
+								<div class="item-meta">
+									<span>{formatDate(letter.created_at)}</span>
+									<span>🌙 {letter.received_moons}</span>
+								</div>
+							</div>
+							<span class="chevron">›</span>
+						</button>
+					{/each}
+				</div>
+			{:else if mobileView === 'detail' && selectedLetter}
+				<!-- Mobile Detail View -->
+				<div class="mobile-detail">
+					<div class="mobile-detail-header">
 						<div class="letter-badge">
 							{selectedLetter.received_moons}
 						</div>
@@ -179,27 +182,108 @@
 							<span class="letter-meta">
 								{formatDate(selectedLetter.created_at)} · 🌙 {selectedLetter.received_moons} moons
 							</span>
-			</div>
-		</div>
-		
-					<!-- Letter content -->
-					<div class="letter-content">
+						</div>
+					</div>
+					
+					<div class="mobile-detail-content">
 						<p>{selectedLetter.content}</p>
 					</div>
 					
-					<!-- Moon voter -->
-					<div class="letter-vote">
+					<div class="mobile-detail-vote">
 						<MoonVoter onVote={handleVote} />
 					</div>
 				</div>
-			{:else}
-				<div class="center-message">
-					<div class="icon">📬</div>
-					<p>Select a letter to read</p>
-				</div>
 			{/if}
 		</div>
-	</div>
+	{:else}
+		<!-- Desktop View -->
+		<div class="content-area">
+			<!-- Sidebar - toggleable -->
+			{#if showSidebar}
+				<div class="sidebar">
+					<div class="sidebar-scroll">
+						{#if loading}
+							<div class="sidebar-empty">Loading...</div>
+						{:else if letters.length === 0}
+							<div class="sidebar-empty">
+								<span class="empty-icon">📭</span>
+								<span>No letters yet</span>
+							</div>
+						{:else}
+							{#each letters as letter (letter.id)}
+								<button
+									onclick={() => selectLetter(letter)}
+									class="sidebar-item"
+									class:active={selectedId === letter.id}
+								>
+									<div class="moon-badge">
+										{letter.received_moons > 99 ? '99+' : letter.received_moons}
+									</div>
+									<div class="item-info">
+										<span class="item-title">{letter.subject}</span>
+										<span class="item-preview">{letter.content.slice(0, 40)}...</span>
+										<div class="item-meta">
+											<span>{formatDate(letter.created_at)}</span>
+											<span>🌙 {letter.received_moons}</span>
+										</div>
+									</div>
+								</button>
+							{/each}
+						{/if}
+					</div>
+				</div>
+			{/if}
+			
+			<!-- Main content -->
+			<div class="main-area">
+				{#if loading}
+					<div class="center-message">
+						<div class="icon">📬</div>
+						<p>Loading letters...</p>
+					</div>
+				{:else if letters.length === 0}
+					<div class="center-message">
+						<div class="icon">📭</div>
+						<h2>No letters yet</h2>
+						<p>Be the first to write a letter to Attar.</p>
+						<button onclick={goToWrite} class="cta-btn">
+							✉ Write First Letter
+						</button>
+					</div>
+				{:else if selectedLetter}
+					<div class="letter-view">
+						<!-- Letter header -->
+						<div class="letter-header">
+							<div class="letter-badge">
+								{selectedLetter.received_moons}
+							</div>
+							<div class="letter-info">
+								<h2>{selectedLetter.subject}</h2>
+								<span class="letter-meta">
+									{formatDate(selectedLetter.created_at)} · 🌙 {selectedLetter.received_moons} moons
+								</span>
+							</div>
+						</div>
+		
+						<!-- Letter content -->
+						<div class="letter-content">
+							<p>{selectedLetter.content}</p>
+						</div>
+						
+						<!-- Moon voter -->
+						<div class="letter-vote">
+							<MoonVoter onVote={handleVote} />
+						</div>
+					</div>
+				{:else}
+					<div class="center-message">
+						<div class="icon">📬</div>
+						<p>Select a letter to read</p>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -532,7 +616,7 @@
 		border-top: 1px solid rgba(120, 110, 130, 0.2);
 	}
 	
-	/* Responsive */
+	/* Responsive - Desktop sidebar overlay (fallback) */
 	@media (max-width: 768px) {
 		.sidebar {
 			position: absolute;
@@ -550,5 +634,118 @@
 		.letter-content {
 			padding: 16px;
 		}
+	}
+	
+	/* Mobile-specific styles */
+	.mobile-content {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	
+	.mobile-list {
+		flex: 1;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+	
+	.mobile-list-item {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		width: 100%;
+		padding: 16px 20px;
+		background: transparent;
+		border: none;
+		border-bottom: 1px solid rgba(120, 110, 130, 0.15);
+		cursor: pointer;
+		text-align: left;
+		transition: background 0.15s;
+	}
+	
+	.mobile-list-item:active {
+		background: rgba(200, 230, 180, 0.08);
+	}
+	
+	.mobile-list-item .moon-badge {
+		width: 44px;
+		height: 44px;
+		font-size: 12px;
+	}
+	
+	.mobile-list-item .item-info {
+		flex: 1;
+		min-width: 0;
+	}
+	
+	.mobile-list-item .item-title {
+		font-size: 14px;
+		margin-bottom: 4px;
+	}
+	
+	.mobile-list-item .item-preview {
+		font-size: 12px;
+		-webkit-line-clamp: 2;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	
+	.chevron {
+		font-size: 24px;
+		color: rgba(200, 230, 180, 0.3);
+		flex-shrink: 0;
+	}
+	
+	/* Mobile Detail View */
+	.mobile-detail {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+	
+	.mobile-detail-header {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+		padding: 16px 20px;
+		background: rgba(0, 0, 0, 0.2);
+		border-bottom: 1px solid rgba(120, 110, 130, 0.2);
+	}
+	
+	.mobile-detail-header .letter-badge {
+		width: 52px;
+		height: 52px;
+		font-size: 16px;
+	}
+	
+	.mobile-detail-header .letter-info h2 {
+		font-size: 16px;
+		margin-bottom: 4px;
+	}
+	
+	.mobile-detail-header .letter-meta {
+		font-size: 11px;
+	}
+	
+	.mobile-detail-content {
+		flex: 1;
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+		padding: 20px;
+	}
+	
+	.mobile-detail-content p {
+		font-size: 15px;
+		line-height: 1.7;
+		color: rgba(200, 230, 180, 0.75);
+		white-space: pre-wrap;
+	}
+	
+	.mobile-detail-vote {
+		border-top: 1px solid rgba(120, 110, 130, 0.2);
+		flex-shrink: 0;
 	}
 </style>

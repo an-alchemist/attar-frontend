@@ -6,24 +6,39 @@ export const load: LayoutLoad = async ({ data, depends, fetch }) => {
 	// This ensures the layout re-runs when auth state changes
 	depends('supabase:auth');
 
-	const supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-		global: {
-			fetch
-		},
-		cookies: {
-			// Let the browser handle cookies automatically
-		}
-	});
+	// Handle missing env vars gracefully
+	if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) {
+		console.error('Missing Supabase environment variables');
+		return {
+			supabase: null,
+			session: null,
+			user: null
+		};
+	}
 
-	// Get fresh session - this uses the cookies set by hooks.server.ts
-	const {
-		data: { session }
-	} = await supabase.auth.getSession();
+	try {
+		const supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+			global: {
+				fetch
+			}
+		});
 
-	return {
-		supabase,
-		session,
-		user: session?.user ?? null
-	};
+		// Get fresh session - this uses the cookies set by hooks.server.ts
+		const {
+			data: { session }
+		} = await supabase.auth.getSession();
+
+		return {
+			supabase,
+			session,
+			user: session?.user ?? null
+		};
+	} catch (e) {
+		console.error('Error creating browser Supabase client:', e);
+		return {
+			supabase: null,
+			session: null,
+			user: null
+		};
+	}
 };
-

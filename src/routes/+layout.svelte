@@ -23,6 +23,13 @@
 	);
 
 	onMount(() => {
+		// Only set up if supabase client exists
+		if (!data.supabase) {
+			console.error('Supabase client not available');
+			initAuth();
+			return;
+		}
+		
 		// Set the supabase client from layout data (created fresh each page load)
 		setSupabaseClient(data.supabase);
 		

@@ -1,33 +1,45 @@
-import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ssr';
+import { createBrowserClient } from '@supabase/ssr';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) {
 	throw new Error('Missing Supabase environment variables. Please set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY in your .env file.');
 }
 
-// Browser client - uses cookies managed by hooks.server.ts
-export const supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+// Singleton client for use in stores (will be set from layout)
+let supabaseClient: SupabaseClient | null = null;
 
-// Function to create server client (used in hooks.server.ts and +page.server.ts)
-export function createSupabaseServerClient(cookies: {
-	get: (key: string) => string | undefined;
-	set: (key: string, value: string, options?: any) => void;
-	delete: (key: string, options?: any) => void;
-}) {
-	return createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-		cookies: {
-			getAll() {
-				// @ts-ignore - SvelteKit cookies API
-				return cookies.getAll?.() || [];
-			},
-			setAll(cookiesToSet) {
-				cookiesToSet.forEach(({ name, value, options }) => {
-					cookies.set(name, value, { ...options, path: '/' });
-				});
-			}
-		}
-	});
+export function setSupabaseClient(client: SupabaseClient) {
+	supabaseClient = client;
 }
+
+export function getSupabaseClient(): SupabaseClient {
+	if (!supabaseClient) {
+		// Fallback: create a new client if not set (shouldn't happen in normal flow)
+		supabaseClient = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+	}
+	return supabaseClient;
+}
+
+// For backward compatibility - returns the client
+export const supabase = {
+	get client() {
+		return getSupabaseClient();
+	},
+	// Proxy all methods to the actual client
+	get auth() {
+		return getSupabaseClient().auth;
+	},
+	get storage() {
+		return getSupabaseClient().storage;
+	},
+	from(table: string) {
+		return getSupabaseClient().from(table);
+	},
+	rpc(fn: string, params?: any) {
+		return getSupabaseClient().rpc(fn, params);
+	}
+};
 
 // Types for our tables
 export type AttarProfile = {

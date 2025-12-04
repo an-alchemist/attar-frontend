@@ -1,9 +1,8 @@
 import { writable, derived, get } from 'svelte/store';
-import { browser } from '$app/environment';
 import { supabase, type AttarProfile } from '$lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
-// Auth state stores
+// Auth state stores - these are set from +layout.svelte
 export const user = writable<User | null>(null);
 export const session = writable<Session | null>(null);
 export const profile = writable<AttarProfile | null>(null);
@@ -13,41 +12,30 @@ export const authError = writable<string | null>(null);
 // Derived state
 export const isAuthenticated = derived(user, ($user) => !!$user);
 
-// Initialize auth - call this once in layout
+// Initialize auth - fetches profile for current user
 export async function initAuth() {
 	loading.set(true);
 	authError.set(null);
 	
 	try {
-		// Get initial session - with SSR, this reads from cookies (already validated by server)
-		const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+		const currentUser = get(user);
 		
-		if (error) {
-			console.error('Error getting session:', error);
-			authError.set(error.message);
+		if (currentUser) {
+			await fetchProfile(currentUser.id);
 		}
 		
-		if (initialSession) {
-			session.set(initialSession);
-			user.set(initialSession.user);
-			await fetchProfile(initialSession.user.id);
-		}
-		
-		// Listen for auth state changes
+		// Listen for auth state changes to update profile
 		const { data: { subscription } } = supabase.auth.onAuthStateChange(
 			async (event, newSession) => {
 				console.log('Auth event:', event);
-				
-				session.set(newSession);
-				user.set(newSession?.user ?? null);
 				
 				if (event === 'SIGNED_IN' && newSession?.user) {
 					await fetchProfile(newSession.user.id);
 				} else if (event === 'SIGNED_OUT') {
 					profile.set(null);
 				} else if (event === 'TOKEN_REFRESHED' && newSession?.user) {
-					console.log('Token refreshed automatically');
-					// Session refreshed, ensure profile is loaded
+					console.log('Token refreshed');
+					// Ensure profile is loaded
 					const currentProfile = get(profile);
 					if (!currentProfile) {
 						await fetchProfile(newSession.user.id);
@@ -56,7 +44,7 @@ export async function initAuth() {
 			}
 		);
 		
-		// Return unsubscribe function for cleanup
+		// Return unsubscribe function
 		return () => {
 			subscription.unsubscribe();
 		};
@@ -228,8 +216,6 @@ export async function signInWithTwitter() {
 	authError.set(null);
 	
 	try {
-		// Note: Twitter OAuth works better without explicit redirectTo
-		// Supabase uses the Site URL from dashboard settings
 		const { data, error } = await supabase.auth.signInWithOAuth({
 			provider: 'twitter'
 		});

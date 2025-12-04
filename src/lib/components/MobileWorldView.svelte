@@ -14,8 +14,8 @@
 	
 	let activeTab = $state<'world' | 'backstory' | 'mailbox' | 'memory' | 'timeline'>('world');
 	
+	// Removed 'Story' tab since it has no destination yet
 	const tabs = [
-		{ id: 'backstory' as const, icon: '◈', label: 'Story' },
 		{ id: 'mailbox' as const, icon: '✉', label: 'Mail' },
 		{ id: 'world' as const, icon: '◆', label: 'Today' },
 		{ id: 'memory' as const, icon: '⬡', label: 'Memory' },
@@ -30,10 +30,6 @@
 		
 		// Navigate to full page for other tabs
 		switch (tabId) {
-			case 'backstory':
-				// For now, stay on world but could navigate to /backstory if created
-				activeTab = 'world';
-				break;
 			case 'mailbox':
 				goto('/mailbox');
 				break;
@@ -114,20 +110,21 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		justify-content: center;
 		padding: 16px;
 		padding-top: 72px; /* Space for header */
-		padding-bottom: 80px; /* Space for bottom tabs */
+		padding-bottom: 88px; /* Space for bottom tabs */
 		overflow-y: auto;
+		overflow-x: hidden;
 		-webkit-overflow-scrolling: touch;
 	}
 	
 	.world-wrapper {
 		width: 100%;
 		max-width: 480px;
-		max-height: calc(100vh - 180px);
 		display: flex;
 		flex-direction: column;
+		/* Allow content to expand and be scrollable */
+		flex-shrink: 0;
 	}
 	
 	/* Bottom navigation */

@@ -478,7 +478,7 @@
 					ontouchend={handleCanvasClick}
 					onmousemove={handleMouseMove}
 					onmouseleave={handleMouseLeave}
-					class="absolute top-4 left-4 right-4 cursor-pointer rounded touch-none"
+					class="absolute top-4 left-4 right-4 cursor-pointer rounded canvas-overlay"
 					style="width: calc(100% - 2rem); height: auto;"
 					class:opacity-0={mediaLoading || mediaError}
 				></canvas>
@@ -490,7 +490,7 @@
 					ontouchend={handleCanvasClick}
 					onmousemove={handleMouseMove}
 					onmouseleave={handleMouseLeave}
-					class="w-full h-auto cursor-pointer block rounded touch-none"
+					class="w-full h-auto cursor-pointer block rounded canvas-overlay"
 					class:opacity-0={mediaLoading || mediaError}
 				></canvas>
 			{/if}
@@ -505,15 +505,14 @@
 	</div>
 	
 	<!-- Voting buttons - horizontal row below terminal -->
-	<div class="w-full mt-4 flex flex-wrap gap-2 justify-center">
+	<div class="voting-buttons-row">
 		{#each choices.slice(0, 7) as choice (choice.id)}
 			<button
 				onclick={() => openVotePopup(choice)}
-				class="flex items-center gap-2 px-3 py-1.5 rounded transition-all text-xs hover:scale-105"
-				style="font-family: 'JetBrains Mono', monospace; background: rgba(80, 70, 90, 0.6); border: 1px solid rgba(200, 230, 180, 0.2); color: rgba(200, 230, 180, 0.8);"
+				class="vote-choice-btn"
 			>
-				<span>{choice.title}</span>
-				<span style="color: rgba(200, 230, 180, 0.5);">{getVotePercentage(choice.votes)}%</span>
+				<span class="choice-title">{choice.title}</span>
+				<span class="choice-percent">{getVotePercentage(choice.votes)}%</span>
 			</button>
 		{/each}
 	</div>
@@ -757,9 +756,18 @@
 		-moz-appearance: textfield;
 	}
 	
-	/* Touch device optimizations */
-	.touch-none {
+	/* Canvas touch behavior */
+	.canvas-overlay {
+		/* On desktop: capture all touch/mouse for interactive boxes */
 		touch-action: none;
+	}
+	
+	/* On mobile: allow vertical scrolling, users can use button row below */
+	@media (max-width: 767px) {
+		.canvas-overlay {
+			touch-action: pan-y pinch-zoom;
+			pointer-events: none; /* Let touches pass through to scroll */
+		}
 	}
 	
 	/* Loading state */
@@ -843,16 +851,64 @@
 		transform: scale(1.05);
 	}
 	
+	/* Voting buttons row */
+	.voting-buttons-row {
+		width: 100%;
+		margin-top: 16px;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		justify-content: center;
+	}
+	
+	.vote-choice-btn {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 12px;
+		border-radius: 8px;
+		font-family: 'JetBrains Mono', monospace;
+		font-size: 12px;
+		background: rgba(80, 70, 90, 0.6);
+		border: 1px solid rgba(200, 230, 180, 0.2);
+		color: rgba(200, 230, 180, 0.8);
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+	
+	.vote-choice-btn:hover {
+		transform: scale(1.05);
+		background: rgba(80, 70, 90, 0.8);
+	}
+	
+	.choice-percent {
+		color: rgba(200, 230, 180, 0.5);
+	}
+	
 	/* Mobile responsive adjustments */
 	@media (max-width: 767px) {
 		.world-card-container :global(.terminal-window) {
 			border-radius: 12px;
 		}
 		
-		/* Larger touch targets for voting buttons on mobile */
-		.world-card-container :global(button) {
-			min-height: 44px;
-			min-width: 44px;
+		/* Larger, more prominent voting buttons on mobile */
+		.voting-buttons-row {
+			gap: 10px;
+			padding: 0 8px;
+		}
+		
+		.vote-choice-btn {
+			padding: 14px 16px;
+			font-size: 13px;
+			min-height: 48px;
+			border-radius: 10px;
+			background: rgba(80, 70, 90, 0.8);
+			border: 1px solid rgba(200, 230, 180, 0.3);
+		}
+		
+		.vote-choice-btn:active {
+			transform: scale(0.97);
+			background: rgba(100, 90, 110, 0.9);
 		}
 	}
 	

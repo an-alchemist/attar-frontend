@@ -478,19 +478,27 @@
 	}
 	
 	.back-btn {
-		padding: 8px 16px;
-		font-size: 12px;
+		padding: 10px 18px;
+		font-size: 13px;
 		color: rgba(200, 230, 180, 0.8);
 		background: rgba(200, 230, 180, 0.1);
 		border: 1px solid rgba(200, 230, 180, 0.3);
-		border-radius: 6px;
+		border-radius: 8px;
 		cursor: pointer;
-		transition: all 0.2s;
+		transition: all 0.15s;
+		min-height: 44px;
+		min-width: 44px;
+		-webkit-tap-highlight-color: transparent;
 	}
 	
 	.back-btn:hover {
 		background: rgba(200, 230, 180, 0.2);
 		color: rgba(200, 230, 180, 1);
+	}
+	
+	.back-btn:active {
+		transform: scale(0.95);
+		background: rgba(200, 230, 180, 0.25);
 	}
 	
 	.toggle-btn {

@@ -20,9 +20,9 @@ export async function load() {
 	const metadata = latestEnv?.metadata as { title?: string; day?: number } || {};
 	
 	// Ensure OG image is absolute URL
-	let ogImage = latestEnv?.world_image_url || 'https://attar.day/worlds/be.png';
+	let ogImage = latestEnv?.world_image_url || 'https://attarglitch.com/worlds/be.png';
 	if (ogImage && !ogImage.startsWith('http')) {
-		ogImage = `https://attar.day${ogImage.startsWith('/') ? '' : '/'}${ogImage}`;
+		ogImage = `https://attarglitch.com${ogImage.startsWith('/') ? '' : '/'}${ogImage}`;
 	}
 	
 	return {

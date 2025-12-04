@@ -207,7 +207,7 @@
 	<meta property="og:title" content={pageTitle} />
 	<meta property="og:image" content={data.ogImage} />
 	<meta property="og:type" content="website" />
-	<meta property="og:url" content="https://attar.day" />
+	<meta property="og:url" content="https://attarglitch.com" />
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:title" content={pageTitle} />
 	<meta name="twitter:image" content={data.ogImage} />

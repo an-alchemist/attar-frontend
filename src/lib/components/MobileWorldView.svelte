@@ -22,6 +22,9 @@
 	let voteError = $state('');
 	let voteSuccess = $state('');
 	
+	// Show full backstory text
+	let showFullBackstory = $state(false);
+	
 	const moonOptions = [1, 3, 5];
 	
 	// Sync choices when currentEnv changes
@@ -134,9 +137,9 @@
 	
 	<!-- Scrollable content -->
 	<div class="content-scroll">
-		<!-- Hero Section -->
+		<!-- Hero Section - Large video -->
 		<div class="hero-section">
-			<!-- Media -->
+			<!-- Media - Full width, taller -->
 			<div class="hero-media">
 				{#if isVideo}
 					<video src={mediaUrl} autoplay loop muted playsinline class="media-element"></video>
@@ -147,15 +150,27 @@
 				
 				<!-- Day badge -->
 				<div class="day-badge">Day {currentEnv.day}</div>
+				
+				<!-- Title overlay on video -->
+				<div class="title-overlay">
+					<h1 class="world-title">{currentEnv.title}</h1>
+				</div>
 			</div>
 			
-			<!-- Title & backstory -->
-			<div class="hero-info">
-				<h1 class="world-title">{currentEnv.title}</h1>
-				{#if latestBackstory?.text}
-					<p class="backstory-line">{latestBackstory.text}</p>
-				{/if}
-			</div>
+			<!-- Backstory - compact with read more -->
+			{#if latestBackstory?.text}
+				<div class="backstory-section">
+					{#if showFullBackstory}
+						<p class="backstory-text">{latestBackstory.text}</p>
+						<button class="read-more-btn" onclick={() => showFullBackstory = false}>Show less</button>
+					{:else}
+						<p class="backstory-text truncated">{latestBackstory.text.slice(0, 80)}{latestBackstory.text.length > 80 ? '...' : ''}</p>
+						{#if latestBackstory.text.length > 80}
+							<button class="read-more-btn" onclick={() => showFullBackstory = true}>Read more</button>
+						{/if}
+					{/if}
+				</div>
+			{/if}
 		</div>
 		
 		<!-- Choices Section -->
@@ -297,7 +312,8 @@
 	.hero-media {
 		position: relative;
 		width: 100%;
-		aspect-ratio: 16 / 10;
+		aspect-ratio: 4 / 5; /* Taller video - takes more screen space */
+		max-height: 55vh;
 		overflow: hidden;
 	}
 	
@@ -310,42 +326,79 @@
 	.media-overlay {
 		position: absolute;
 		inset: 0;
-		background: linear-gradient(180deg, transparent 40%, rgba(10, 10, 12, 0.8) 80%, rgba(10, 10, 12, 1) 100%);
+		background: linear-gradient(
+			180deg, 
+			transparent 0%,
+			transparent 50%, 
+			rgba(10, 10, 12, 0.6) 75%, 
+			rgba(10, 10, 12, 0.95) 100%
+		);
 	}
 	
 	.day-badge {
 		position: absolute;
-		top: 16px;
-		right: 16px;
-		padding: 6px 12px;
-		font-size: 11px;
+		top: 12px;
+		right: 12px;
+		padding: 5px 10px;
+		font-size: 10px;
 		color: rgba(200, 230, 180, 0.9);
-		background: rgba(0, 0, 0, 0.6);
-		border: 1px solid rgba(200, 230, 180, 0.3);
-		border-radius: 6px;
+		background: rgba(0, 0, 0, 0.5);
+		border: 1px solid rgba(200, 230, 180, 0.25);
+		border-radius: 5px;
 		backdrop-filter: blur(8px);
 	}
 	
-	.hero-info {
-		padding: 0 20px 20px;
-		margin-top: -40px;
-		position: relative;
+	.title-overlay {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		padding: 16px;
 		z-index: 2;
 	}
 	
 	.world-title {
-		font-size: 22px;
+		font-size: 20px;
 		font-weight: 500;
-		color: rgba(200, 230, 180, 0.95);
-		margin: 0 0 8px 0;
+		color: rgba(255, 255, 255, 0.95);
+		margin: 0;
 		line-height: 1.3;
+		text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 	}
 	
-	.backstory-line {
-		font-size: 13px;
+	/* Backstory section - compact */
+	.backstory-section {
+		padding: 12px 16px;
+		background: rgba(30, 25, 40, 0.5);
+		border-bottom: 1px solid rgba(120, 110, 130, 0.2);
+	}
+	
+	.backstory-text {
+		font-size: 12px;
 		color: rgba(200, 230, 180, 0.6);
 		margin: 0;
 		line-height: 1.5;
+	}
+	
+	.backstory-text.truncated {
+		display: inline;
+	}
+	
+	.read-more-btn {
+		display: inline;
+		padding: 0;
+		margin-left: 4px;
+		font-size: 12px;
+		font-family: inherit;
+		color: rgba(147, 112, 219, 0.9);
+		background: none;
+		border: none;
+		cursor: pointer;
+		text-decoration: underline;
+	}
+	
+	.read-more-btn:active {
+		opacity: 0.7;
 	}
 	
 	/* Choices Section */

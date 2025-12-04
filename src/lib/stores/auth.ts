@@ -1,4 +1,5 @@
 import { writable, derived, get } from 'svelte/store';
+import { browser } from '$app/environment';
 import { supabase, type AttarProfile } from '$lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -11,6 +12,90 @@ export const authError = writable<string | null>(null);
 
 // Derived state
 export const isAuthenticated = derived(user, ($user) => !!$user);
+
+// Session refresh interval (30 minutes)
+const SESSION_REFRESH_INTERVAL = 30 * 60 * 1000;
+let refreshIntervalId: ReturnType<typeof setInterval> | null = null;
+let lastRefreshTime = 0;
+
+// Force refresh the session - useful when returning to tab
+export async function refreshSession(): Promise<boolean> {
+	try {
+		const { data: { session: newSession }, error } = await supabase.auth.refreshSession();
+		
+		if (error) {
+			console.warn('Session refresh failed:', error.message);
+			// If refresh fails, try to get existing session
+			const { data: { session: existingSession } } = await supabase.auth.getSession();
+			if (existingSession) {
+				session.set(existingSession);
+				user.set(existingSession.user);
+				return true;
+			}
+			return false;
+		}
+		
+		if (newSession) {
+			session.set(newSession);
+			user.set(newSession.user);
+			lastRefreshTime = Date.now();
+			console.log('Session refreshed successfully');
+			return true;
+		}
+		
+		return false;
+	} catch (e) {
+		console.error('Session refresh error:', e);
+		return false;
+	}
+}
+
+// Ensure session is valid before making API calls
+export async function ensureValidSession(): Promise<boolean> {
+	const currentSession = get(session);
+	
+	if (!currentSession) {
+		return false;
+	}
+	
+	// Check if token is close to expiring (within 5 minutes)
+	const expiresAt = currentSession.expires_at;
+	if (expiresAt) {
+		const expiresAtMs = expiresAt * 1000;
+		const now = Date.now();
+		const fiveMinutes = 5 * 60 * 1000;
+		
+		if (expiresAtMs - now < fiveMinutes) {
+			console.log('Session expiring soon, refreshing...');
+			return await refreshSession();
+		}
+	}
+	
+	// Session seems valid
+	return true;
+}
+
+// Handle visibility change - refresh when tab becomes visible
+function handleVisibilityChange() {
+	if (!browser) return;
+	
+	if (document.visibilityState === 'visible') {
+		const currentUser = get(user);
+		if (currentUser) {
+			// Only refresh if it's been more than 5 minutes since last refresh
+			const timeSinceRefresh = Date.now() - lastRefreshTime;
+			if (timeSinceRefresh > 5 * 60 * 1000) {
+				console.log('Tab visible, refreshing session...');
+				refreshSession().then((success) => {
+					if (success) {
+						// Also refresh profile to ensure moons are up to date
+						refreshProfile();
+					}
+				});
+			}
+		}
+	}
+}
 
 // Initialize auth - call this once in layout
 export async function initAuth() {
@@ -29,6 +114,7 @@ export async function initAuth() {
 		if (initialSession) {
 			session.set(initialSession);
 			user.set(initialSession.user);
+			lastRefreshTime = Date.now();
 			await fetchProfile(initialSession.user.id);
 		}
 		
@@ -41,10 +127,12 @@ export async function initAuth() {
 				user.set(newSession?.user ?? null);
 				
 				if (event === 'SIGNED_IN' && newSession?.user) {
+					lastRefreshTime = Date.now();
 					await fetchProfile(newSession.user.id);
 				} else if (event === 'SIGNED_OUT') {
 					profile.set(null);
 				} else if (event === 'TOKEN_REFRESHED' && newSession?.user) {
+					lastRefreshTime = Date.now();
 					// Session refreshed, ensure profile is loaded
 					const currentProfile = get(profile);
 					if (!currentProfile) {
@@ -54,9 +142,30 @@ export async function initAuth() {
 			}
 		);
 		
+		// Setup visibility change listener (refresh when tab becomes visible)
+		if (browser) {
+			document.addEventListener('visibilitychange', handleVisibilityChange);
+			
+			// Setup periodic session refresh (every 30 minutes)
+			refreshIntervalId = setInterval(() => {
+				const currentUser = get(user);
+				if (currentUser && document.visibilityState === 'visible') {
+					console.log('Periodic session refresh...');
+					refreshSession();
+				}
+			}, SESSION_REFRESH_INTERVAL);
+		}
+		
 		// Return unsubscribe function for cleanup
 		return () => {
 			subscription.unsubscribe();
+			if (browser) {
+				document.removeEventListener('visibilitychange', handleVisibilityChange);
+				if (refreshIntervalId) {
+					clearInterval(refreshIntervalId);
+					refreshIntervalId = null;
+				}
+			}
 		};
 	} catch (e) {
 		console.error('Auth init error:', e);

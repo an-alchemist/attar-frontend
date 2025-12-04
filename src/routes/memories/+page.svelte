@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { getMemories, type MemoryEntry } from '$lib/stores/memory';
 	import { isMobile } from '$lib/stores/mobile';
@@ -53,12 +53,13 @@
 		}
 	});
 	
-	function goBack() {
+	async function goBack() {
 		// On mobile detail view, go back to list first
 		if ($isMobile && mobileView === 'detail') {
 			mobileView = 'list';
 			return;
 		}
+		await invalidateAll();
 		goto('/');
 	}
 	

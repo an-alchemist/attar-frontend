@@ -1,45 +1,6 @@
-import { createBrowserClient } from '@supabase/ssr';
+import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ssr';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import type { SupabaseClient } from '@supabase/supabase-js';
-
-if (!PUBLIC_SUPABASE_URL || !PUBLIC_SUPABASE_ANON_KEY) {
-	throw new Error('Missing Supabase environment variables. Please set PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY in your .env file.');
-}
-
-// Singleton client for use in stores (will be set from layout)
-let supabaseClient: SupabaseClient | null = null;
-
-export function setSupabaseClient(client: SupabaseClient) {
-	supabaseClient = client;
-}
-
-export function getSupabaseClient(): SupabaseClient {
-	if (!supabaseClient) {
-		// Fallback: create a new client if not set (shouldn't happen in normal flow)
-		supabaseClient = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
-	}
-	return supabaseClient;
-}
-
-// For backward compatibility - returns the client
-export const supabase = {
-	get client() {
-		return getSupabaseClient();
-	},
-	// Proxy all methods to the actual client
-	get auth() {
-		return getSupabaseClient().auth;
-	},
-	get storage() {
-		return getSupabaseClient().storage;
-	},
-	from(table: string) {
-		return getSupabaseClient().from(table);
-	},
-	rpc(fn: string, params?: any) {
-		return getSupabaseClient().rpc(fn, params);
-	}
-};
 
 // Types for our tables
 export type AttarProfile = {
@@ -116,4 +77,48 @@ export type AttarCapability = {
 	description: string | null;
 	unlocked_at: string;
 	created_at: string;
+};
+
+// Browser client - created ONCE and reused
+let browserClient: SupabaseClient | null = null;
+
+export function createBrowserSupabaseClient() {
+	if (browserClient) return browserClient;
+	
+	browserClient = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+	return browserClient;
+}
+
+// For server-side - create fresh client per request with cookies
+export function createServerSupabaseClient(cookies: {
+	getAll: () => { name: string; value: string }[];
+	setAll: (cookies: { name: string; value: string; options: any }[]) => void;
+}) {
+	return createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+		cookies
+	});
+}
+
+// Get the appropriate client based on environment
+export function getSupabaseClient(): SupabaseClient {
+	if (isBrowser()) {
+		return createBrowserSupabaseClient();
+	}
+	throw new Error('Cannot use getSupabaseClient on server - use createServerSupabaseClient with cookies');
+}
+
+// Shorthand for browser usage - ensures single instance
+export const supabase = {
+	get auth() {
+		return createBrowserSupabaseClient().auth;
+	},
+	get storage() {
+		return createBrowserSupabaseClient().storage;
+	},
+	from(table: string) {
+		return createBrowserSupabaseClient().from(table);
+	},
+	rpc(fn: string, params?: any) {
+		return createBrowserSupabaseClient().rpc(fn, params);
+	}
 };

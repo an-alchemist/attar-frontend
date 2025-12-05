@@ -4,8 +4,8 @@
 	import Header from '$lib/components/Header.svelte';
 	import AuthModal from '$lib/components/AuthModal.svelte';
 	import ProfileSettings from '$lib/components/ProfileSettings.svelte';
-	import { initAuth, session as sessionStore, user as userStore } from '$lib/stores/auth';
-	import { setSupabaseClient } from '$lib/supabase';
+	import { authState, setAuth, setProfile, isAuthenticated } from '$lib/state.svelte';
+	import { supabase } from '$lib/supabase';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { invalidate } from '$app/navigation';
@@ -14,65 +14,67 @@
 	let showAuthModal = $state(false);
 	let showSettings = $state(false);
 
-	// Routes where the header should be hidden (expanded view pages)
+	// Routes where header is hidden
 	const hiddenHeaderRoutes = ['/mailbox', '/timeline', '/memories'];
-	
-	// Check if current route should hide the header
 	const shouldHideHeader = $derived(
 		hiddenHeaderRoutes.some(route => $page.url.pathname.startsWith(route))
 	);
 
 	onMount(() => {
-		// Only set up if supabase client exists
-		if (!data.supabase) {
-			console.error('Supabase client not available');
-			initAuth();
-			return;
+		// Set initial auth state from server
+		setAuth(data.user, data.session);
+		
+		// Fetch profile if logged in
+		if (data.user) {
+			fetchProfile(data.user.id);
 		}
 		
-		// Set the supabase client from layout data (created fresh each page load)
-		setSupabaseClient(data.supabase);
-		
-		// Initialize auth with the session from server
-		if (data.session) {
-			sessionStore.set(data.session);
-			userStore.set(data.session.user);
-		}
-		
-		// Initialize auth (will fetch profile, set up listeners)
-		initAuth();
-		
-		// Listen for auth state changes and invalidate to refresh server data
-		const { data: { subscription } } = data.supabase.auth.onAuthStateChange((event, newSession) => {
-			// Update stores immediately
-			sessionStore.set(newSession);
-			userStore.set(newSession?.user ?? null);
-			
-			// Invalidate to re-run server load and get fresh session in cookies
-			if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
-				invalidate('supabase:auth');
+		// Listen for auth changes
+		const { data: { subscription } } = supabase.auth.onAuthStateChange(
+			async (event, session) => {
+				// Update local state immediately
+				setAuth(session?.user ?? null, session);
+				
+				if (event === 'SIGNED_IN' && session?.user) {
+					await fetchProfile(session.user.id);
+				} else if (event === 'SIGNED_OUT') {
+					setProfile(null);
+				}
+				
+				// Invalidate server data on auth changes
+				if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+					invalidate('supabase:auth');
+				}
 			}
-		});
+		);
 
-		return () => {
-			subscription.unsubscribe();
-		};
+		return () => subscription.unsubscribe();
 	});
-
-	function openAuth() {
-		showAuthModal = true;
-	}
-
-	function closeAuth() {
-		showAuthModal = false;
-	}
-
-	function openSettings() {
-		showSettings = true;
-	}
-
-	function closeSettings() {
-		showSettings = false;
+	
+	async function fetchProfile(userId: string) {
+		const { data: profile, error } = await supabase
+			.from('attar_profile')
+			.select('*')
+			.eq('user_id', userId)
+			.single();
+		
+		if (error && error.code === 'PGRST116') {
+			// Create profile if doesn't exist
+			const { data: newProfile } = await supabase
+				.from('attar_profile')
+				.insert({
+					user_id: userId,
+					pseudoname: 'Anonymous',
+					available_moons: 13,
+					receive_letters: true
+				})
+				.select()
+				.single();
+			
+			setProfile(newProfile);
+		} else if (!error) {
+			setProfile(profile);
+		}
 	}
 </script>
 
@@ -82,7 +84,7 @@
 
 <div class="relative w-full h-screen overflow-hidden">
 	{#if !shouldHideHeader}
-		<Header onAuthClick={openAuth} onSettingsClick={openSettings} />
+		<Header onAuthClick={() => showAuthModal = true} onSettingsClick={() => showSettings = true} />
 	{/if}
 	<main class="w-full h-full overflow-hidden">
 		{@render children()}
@@ -90,9 +92,9 @@
 </div>
 
 {#if showAuthModal}
-	<AuthModal onClose={closeAuth} />
+	<AuthModal onClose={() => showAuthModal = false} />
 {/if}
 
 {#if showSettings}
-	<ProfileSettings onClose={closeSettings} />
+	<ProfileSettings onClose={() => showSettings = false} />
 {/if}

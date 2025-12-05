@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { isAuthenticated, profile, refreshProfile } from '$lib/stores/auth';
+	import { isAuthenticated, profile } from '$lib/stores/auth';
 	import { voteOnDecision } from '$lib/stores/moons';
 	import type { CurrentEnv } from '$lib/stores/env';
 	import type { BackstoryEntry } from '$lib/stores/backstory';
@@ -93,20 +93,19 @@
 		const success = await voteOnDecision(currentEnv.id, choiceIndex, selectedMoons);
 		
 		if (success) {
-			// Update local vote count
+			// Update local vote count immediately
 			choices = choices.map((c, i) => 
 				i === choiceIndex ? { ...c, votes: c.votes + selectedMoons } : c
 			);
 			
 			voteSuccess = `+${selectedMoons} 🌙`;
-			await refreshProfile();
+			voting = false;
 			
 			setTimeout(() => {
 				expandedChoiceId = null;
 				selectedMoons = 0;
 				voteSuccess = '';
-				voting = false;
-			}, 1000);
+			}, 800);
 		} else {
 			voteError = 'Vote failed';
 			voting = false;

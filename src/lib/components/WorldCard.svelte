@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { isAuthenticated, profile, refreshProfile } from '$lib/stores/auth';
+	import { isAuthenticated, profile } from '$lib/stores/auth';
 	import { voteOnDecision } from '$lib/stores/moons';
 	import { isMobile } from '$lib/stores/mobile';
 	import MobileBottomModal from './MobileBottomModal.svelte';
@@ -191,15 +191,13 @@
 		const success = await voteOnDecision(envId, choiceIndex, selectedMoons);
 		
 		if (success) {
-			// Update local vote count
+			// Update local vote count immediately
 			choices = choices.map((c, i) => 
 				i === choiceIndex ? { ...c, votes: c.votes + selectedMoons } : c
 			);
 			
 			voteSuccess = `Voted with ${selectedMoons} 🌙`;
-			
-			// Refresh profile to get updated moon count
-			await refreshProfile();
+			voting = false;
 			
 			if (onVoteSuccess) {
 				onVoteSuccess();
@@ -207,9 +205,8 @@
 			
 			setTimeout(() => {
 				closePopup();
-				voting = false;
 				voteSuccess = '';
-			}, 1200);
+			}, 800);
 		} else {
 			voteError = 'Failed to vote. Please try again.';
 			voting = false;

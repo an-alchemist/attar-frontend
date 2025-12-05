@@ -59,8 +59,8 @@
 			mobileView = 'list';
 			return;
 		}
-		await invalidateAll();
-		goto('/');
+		// Navigate - don't block on invalidateAll
+		goto('/').then(() => invalidateAll());
 	}
 	
 	function selectMemory(memory: MemoryEntry) {
@@ -253,7 +253,7 @@
 								{#if selectedMemory.envImageUrl}
 									<div class="env-image">
 										{#if selectedMemory.envVideoUrl}
-											<video src={selectedMemory.envVideoUrl} autoplay loop muted playsinline />
+											<video src={selectedMemory.envVideoUrl} autoplay loop muted playsinline crossorigin="anonymous" />
 										{:else}
 											<img src={selectedMemory.envImageUrl} alt="World state" />
 										{/if}
@@ -418,7 +418,7 @@
 									{#if selectedMemory.envImageUrl}
 										<div class="env-image">
 											{#if selectedMemory.envVideoUrl}
-												<video src={selectedMemory.envVideoUrl} autoplay loop muted playsinline />
+												<video src={selectedMemory.envVideoUrl} autoplay loop muted playsinline crossorigin="anonymous" />
 											{:else}
 												<img src={selectedMemory.envImageUrl} alt="World state" />
 											{/if}

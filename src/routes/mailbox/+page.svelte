@@ -32,8 +32,8 @@
 			mobileView = 'list';
 			return;
 		}
-		await invalidateAll();
-		goto('/');
+		// Navigate - don't block on invalidateAll
+		goto('/').then(() => invalidateAll());
 	}
 	
 	function goToWrite() {

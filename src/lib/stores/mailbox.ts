@@ -72,9 +72,9 @@ export async function sendLetter(subject: string, content: string): Promise<Send
 	
 	const result = data as SendLetterResult;
 	
-	// Refresh profile to get updated moon count
+	// Fire and forget - don't block on profile refresh
 	if (result.success) {
-		await refreshProfile();
+		refreshProfile().catch(e => console.warn('Background profile refresh failed:', e));
 	}
 	
 	return result;
@@ -87,6 +87,9 @@ export async function voteOnLetter(letterId: string, moonAmount: number): Promis
 		return { success: false, error: 'Not logged in' };
 	}
 	
+	// Optimistic UI update - subtract moons immediately
+	profile.update(p => p ? { ...p, available_moons: p.available_moons - moonAmount } : null);
+	
 	const { data, error } = await supabase.rpc('vote_on_letter', {
 		p_user_id: currentProfile.user_id,
 		p_letter_id: letterId,
@@ -95,14 +98,19 @@ export async function voteOnLetter(letterId: string, moonAmount: number): Promis
 	
 	if (error) {
 		console.error('Error voting on letter:', error);
+		// Rollback optimistic update
+		profile.update(p => p ? { ...p, available_moons: p.available_moons + moonAmount } : null);
 		return { success: false, error: error.message };
 	}
 	
 	const result = data as VoteResult;
 	
-	// Refresh profile to get updated moon count
+	// Fire and forget - don't block on profile refresh
 	if (result.success) {
-		await refreshProfile();
+		refreshProfile().catch(e => console.warn('Background profile refresh failed:', e));
+	} else {
+		// Rollback optimistic update if server says no
+		profile.update(p => p ? { ...p, available_moons: p.available_moons + moonAmount } : null);
 	}
 	
 	return result;

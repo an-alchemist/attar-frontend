@@ -26,11 +26,12 @@ export async function getBackstory(): Promise<BackstoryEntry[]> {
 	}));
 }
 
-// Get latest backstory entry
+// Get latest backstory entry (single query with count)
 export async function getLatestBackstory(): Promise<BackstoryEntry | null> {
-	const { data, error } = await supabase
+	// Get latest entry AND count in one query using head:false
+	const { data, error, count } = await supabase
 		.from('attar_backstory')
-		.select('*')
+		.select('*', { count: 'exact' })
 		.order('created_at', { ascending: false })
 		.limit(1)
 		.single();
@@ -39,11 +40,6 @@ export async function getLatestBackstory(): Promise<BackstoryEntry | null> {
 		console.error('Error fetching latest backstory:', error);
 		return null;
 	}
-	
-	// Get total count for day number
-	const { count } = await supabase
-		.from('attar_backstory')
-		.select('*', { count: 'exact', head: true });
 	
 	return {
 		day: count || 1,

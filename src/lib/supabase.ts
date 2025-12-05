@@ -1,6 +1,5 @@
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Types for our tables
 export type AttarProfile = {
@@ -79,6 +78,5 @@ export type AttarCapability = {
 	created_at: string;
 };
 
-// Create browser client directly - singleton pattern
-// This works because env vars are available at module load time in SvelteKit
-export const supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+// Simple client - works everywhere
+export const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);

@@ -1,5 +1,6 @@
 import { supabase, type AttarMailbox } from '$lib/supabase';
-import { authState, updateMoons, updateLetterMoons } from '$lib/state.svelte';
+import { profile, refreshProfile } from '$lib/stores/auth';
+import { get } from 'svelte/store';
 
 export type SendLetterResult = {
 	success: boolean;
@@ -32,7 +33,8 @@ export async function getPublishedLetters(limit = 50): Promise<AttarMailbox[]> {
 
 // Get letter count for today
 export async function getLetterCountToday(): Promise<number> {
-	if (!authState.profile) return 0;
+	const p = get(profile);
+	if (!p) return 0;
 
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -40,7 +42,7 @@ export async function getLetterCountToday(): Promise<number> {
 	const { count, error } = await supabase
 		.from('attar_mailbox')
 		.select('*', { count: 'exact', head: true })
-		.eq('user_id', authState.profile.user_id)
+		.eq('user_id', p.user_id)
 		.gte('created_at', today.toISOString());
 
 	if (error) {
@@ -53,12 +55,11 @@ export async function getLetterCountToday(): Promise<number> {
 
 // Send a letter
 export async function sendLetter(subject: string, content: string): Promise<SendLetterResult> {
-	if (!authState.profile) {
-		return { success: false, error: 'Not logged in' };
-	}
+	const p = get(profile);
+	if (!p) return { success: false, error: 'Not logged in' };
 
 	const { data, error } = await supabase.rpc('send_letter', {
-		p_user_id: authState.profile.user_id,
+		p_user_id: p.user_id,
 		p_subject: subject,
 		p_content: content
 	});
@@ -73,39 +74,33 @@ export async function sendLetter(subject: string, content: string): Promise<Send
 
 // Vote on a letter
 export async function voteOnLetter(letterId: string, moonAmount: number): Promise<VoteResult> {
-	if (!authState.profile) {
-		return { success: false, error: 'Not logged in' };
-	}
-
-	// Optimistic update
-	updateMoons(-moonAmount);
-	updateLetterMoons(letterId, moonAmount);
+	const p = get(profile);
+	if (!p) return { success: false, error: 'Not logged in' };
 
 	const { data, error } = await supabase.rpc('vote_on_letter', {
-		p_user_id: authState.profile.user_id,
+		p_user_id: p.user_id,
 		p_letter_id: letterId,
 		p_moon_amount: moonAmount
 	});
 
 	if (error) {
 		console.error('Error voting on letter:', error);
-		// Rollback
-		updateMoons(moonAmount);
-		updateLetterMoons(letterId, -moonAmount);
 		return { success: false, error: error.message };
 	}
 
+	refreshProfile();
 	return data as VoteResult;
 }
 
 // Get user's letters
 export async function getUserLetters(): Promise<AttarMailbox[]> {
-	if (!authState.profile) return [];
+	const p = get(profile);
+	if (!p) return [];
 
 	const { data, error } = await supabase
 		.from('attar_mailbox')
 		.select('*')
-		.eq('user_id', authState.profile.user_id)
+		.eq('user_id', p.user_id)
 		.order('created_at', { ascending: false });
 
 	if (error) {

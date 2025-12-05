@@ -11,9 +11,7 @@
 	import MobileWorldView from '$lib/components/MobileWorldView.svelte';
 	import { onMount } from 'svelte';
 	import { isMobile } from '$lib/stores/mobile';
-	import { appData, setAppData } from '$lib/state.svelte';
 
-	// Get data from server load function - NO MORE onMount FETCHING!
 	let { data } = $props();
 
 	let worldCenter = { x: 0, y: 0 };
@@ -34,7 +32,6 @@
 	let nodes = $state<any[]>([]);
 	let edges = $state<any[]>([]);
 
-	// Throttled mouse move
 	let lastMouseUpdate = 0;
 	let cachedCanvasRect: DOMRect | null = null;
 
@@ -65,15 +62,6 @@
 	}
 
 	onMount(() => {
-		// Update global state with server data (for other components to use)
-		if (data.currentEnv) {
-			setAppData({
-				currentEnv: data.currentEnv,
-				latestBackstory: data.latestBackstory
-			});
-		}
-
-		// Setup flow nodes
 		const container = document.querySelector('.canvas-container') as HTMLElement;
 		if (!container || !data.currentEnv) return;
 
@@ -149,7 +137,6 @@
 			style: `stroke: ${e.color}; stroke-width: 2;`
 		}));
 
-		// Listen for navigation events
 		const handleNavEvent = (e: Event) => {
 			const customEvent = e as CustomEvent<{ nodeId: string }>;
 			const nodeId = customEvent.detail.nodeId;
@@ -167,7 +154,6 @@
 		};
 	});
 
-	// Dynamic page title
 	const pageTitle = $derived(
 		data.latestBackstory?.text
 			? `Attar - ${data.latestBackstory.text.slice(0, 60)}${data.latestBackstory.text.length > 60 ? '...' : ''}`
@@ -189,13 +175,11 @@
 	<meta name="twitter:description" content={data.latestBackstory?.text || data.ogDescription} />
 </svelte:head>
 
-<!-- Mobile View -->
 {#if $isMobile && data.currentEnv}
 	<MobileWorldView
 		currentEnv={data.currentEnv}
 		latestBackstory={data.latestBackstory}
 	/>
-<!-- Desktop View -->
 {:else}
 	<div
 		class="canvas-container relative w-full h-full bg-black overflow-hidden"
@@ -203,7 +187,6 @@
 		bind:this={canvasElement}
 		style="width: 100%; height: 100%; --mx: {mouseX}px; --my: {mouseY}px; --gap: 12px;"
 	>
-		<!-- Static gray dot grid -->
 		<div
 			class="absolute inset-0 pointer-events-none"
 			style="
@@ -213,7 +196,6 @@
 				background-position: 0 0;
 			"
 		></div>
-		<!-- Light hover effect -->
 		<div
 			class="absolute inset-0 pointer-events-none"
 			style="
@@ -228,7 +210,6 @@
 			"
 		></div>
 
-		<!-- SvelteFlow canvas -->
 		<div class="relative w-full h-full">
 			<SvelteFlowProvider>
 				<FlowCanvas
@@ -268,12 +249,10 @@
 		opacity: 1;
 	}
 
-	/* Simple edge styling - NO expensive drop-shadow */
 	:global(.edge-terminal) {
 		opacity: 0.8;
 	}
 
-	/* Pulse animations - lighter, no filter */
 	:global(.edge-pulse-1 .svelte-flow__edge-path) {
 		stroke-dasharray: 8 12;
 		animation: pulse-flow 4s linear infinite;

@@ -3,7 +3,6 @@ import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/publi
 import type { Handle } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// Create server-side Supabase client with cookies
 	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
 		cookies: {
 			getAll: () => event.cookies.getAll(),
@@ -15,21 +14,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	});
 
-	// Helper to get session - validates and refreshes token
 	event.locals.safeGetSession = async () => {
 		const { data: { session } } = await event.locals.supabase.auth.getSession();
+		if (!session) return { session: null, user: null };
 		
-		if (!session) {
-			return { session: null, user: null };
-		}
-
-		// Validate the user (this also handles token refresh)
 		const { data: { user }, error } = await event.locals.supabase.auth.getUser();
+		if (error || !user) return { session: null, user: null };
 		
-		if (error || !user) {
-			return { session: null, user: null };
-		}
-
 		return { session, user };
 	};
 

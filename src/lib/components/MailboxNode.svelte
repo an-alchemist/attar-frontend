@@ -2,6 +2,7 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import type { NodeProps } from '@xyflow/svelte';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { getPublishedLetters, voteOnLetter, type VoteResult } from '$lib/stores/mailbox';
 	import { isAuthenticated, profile } from '$lib/stores/auth';
 	import type { AttarMailbox } from '$lib/supabase';
@@ -59,11 +60,11 @@
 	}
 	
 	function goToWriteLetter() {
-		window.location.href = '/write';
+		goto('/write');
 	}
 	
 	function openMailboxPage() {
-		window.location.href = '/mailbox';
+		goto('/mailbox');
 	}
 	
 	function formatDate(dateString: string): string {
@@ -80,11 +81,7 @@
 	}
 </script>
 
-<svelte:head>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-</svelte:head>
+<!-- Font loaded in app.html -->
 
 <div class="mailbox-node flex flex-col w-full h-full rounded-lg overflow-hidden" style="background: linear-gradient(145deg, rgba(80, 70, 90, 0.9) 0%, rgba(60, 55, 70, 0.95) 100%); border: 1px solid rgba(120, 110, 130, 0.4);">
 	<Handle type="target" position={Position.Left} id="center" class="!opacity-0 !w-1 !h-1" style="top: 50%; left: 50%;" />

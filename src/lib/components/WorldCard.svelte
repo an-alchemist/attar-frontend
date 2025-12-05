@@ -111,18 +111,27 @@
 		}
 	}
 	
+	// Cache rect to avoid layout thrashing
+	let cachedRect: DOMRect | null = null;
+	
 	function handleMouseMove(e: MouseEvent) {
 		if (!canvas) return;
-		const rect = canvas.getBoundingClientRect();
-		const scaleX = canvas.width / rect.width;
-		const scaleY = canvas.height / rect.height;
-		mouseX = (e.clientX - rect.left) * scaleX;
-		mouseY = (e.clientY - rect.top) * scaleY;
+		// Use cached rect, update only occasionally
+		if (!cachedRect) {
+			cachedRect = canvas.getBoundingClientRect();
+		}
+		const scaleX = canvas.width / cachedRect.width;
+		const scaleY = canvas.height / cachedRect.height;
+		mouseX = (e.clientX - cachedRect.left) * scaleX;
+		mouseY = (e.clientY - cachedRect.top) * scaleY;
 		isHovering = true;
+		drawWithHover(); // Redraw only on mouse move
 	}
 	
 	function handleMouseLeave() {
 		isHovering = false;
+		cachedRect = null; // Clear cache on leave
+		drawStaticBoxes(); // Redraw without hover
 	}
 	
 	function openVotePopup(choice: Choice) {
@@ -213,7 +222,8 @@
 		}
 	}
 	
-	function drawFrame() {
+	// Draw static boxes - NO animation loop needed
+	function drawStaticBoxes() {
 		if (!ctx || !mediaReady || !canvas) return;
 		
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -223,7 +233,41 @@
 			ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 		}
 		
-		// Draw lines from mouse to each box when hovering
+		const fontSize = Math.max(10, canvas.width * 0.012);
+		
+		// Draw static boxes - no animation, just once
+		boxes.forEach((box) => {
+			const alpha = 0.7;
+			
+			ctx.strokeStyle = `rgba(${boxColor.r}, ${boxColor.g}, ${boxColor.b}, ${alpha})`;
+			ctx.lineWidth = 2;
+			ctx.strokeRect(box.x, box.y, box.width, box.height);
+			
+			// Corner markers
+			const markerSize = 5;
+			ctx.fillStyle = `rgba(${boxColor.r}, ${boxColor.g}, ${boxColor.b}, ${alpha})`;
+			ctx.fillRect(box.x - markerSize/2, box.y - markerSize/2, markerSize, markerSize);
+			ctx.fillRect(box.x + box.width - markerSize/2, box.y - markerSize/2, markerSize, markerSize);
+			ctx.fillRect(box.x - markerSize/2, box.y + box.height - markerSize/2, markerSize, markerSize);
+			ctx.fillRect(box.x + box.width - markerSize/2, box.y + box.height - markerSize/2, markerSize, markerSize);
+			
+			// Draw label above box
+			ctx.font = `${fontSize}px 'JetBrains Mono', monospace`;
+			ctx.fillStyle = `rgba(${boxColor.r}, ${boxColor.g}, ${boxColor.b}, 0.9)`;
+			ctx.textAlign = 'left';
+			ctx.textBaseline = 'bottom';
+			ctx.fillText(box.choice.title, box.x, box.y - 6);
+		});
+	}
+	
+	// Only redraw when hovering (for mouse lines) - NOT 60fps
+	function drawWithHover() {
+		if (!ctx || !mediaReady || !canvas) return;
+		
+		// Redraw base
+		drawStaticBoxes();
+		
+		// Add hover effects
 		if (isHovering) {
 			ctx.strokeStyle = `rgba(${boxColor.r}, ${boxColor.g}, ${boxColor.b}, 0.3)`;
 			ctx.lineWidth = 1;
@@ -244,42 +288,11 @@
 			ctx.arc(mouseX, mouseY, 4, 0, Math.PI * 2);
 			ctx.fill();
 		}
-		
-		// Draw calming green boxes with in/out breathing effect
-		const time = Date.now();
-		const fontSize = Math.max(10, canvas.width * 0.012);
-		
-		boxes.forEach((box, index) => {
-			// Smooth breathing in/out effect - each box slightly offset
-			const breathe = Math.sin(time / 2000 + index * 0.6) * 0.5 + 0.5; // 0 to 1
-			const alpha = 0.4 + breathe * 0.5; // 0.4 to 0.9
-			const glowIntensity = 8 + breathe * 12; // 8 to 20
-			
-			ctx.strokeStyle = `rgba(${boxColor.r}, ${boxColor.g}, ${boxColor.b}, ${alpha})`;
-			ctx.lineWidth = 2;
-			ctx.shadowBlur = glowIntensity;
-			ctx.shadowColor = `rgba(${boxColor.r}, ${boxColor.g}, ${boxColor.b}, ${alpha * 0.7})`;
-			ctx.strokeRect(box.x, box.y, box.width, box.height);
-			
-			// Corner markers
-			const markerSize = 5;
-			ctx.fillStyle = `rgba(${boxColor.r}, ${boxColor.g}, ${boxColor.b}, ${alpha})`;
-			ctx.fillRect(box.x - markerSize/2, box.y - markerSize/2, markerSize, markerSize);
-			ctx.fillRect(box.x + box.width - markerSize/2, box.y - markerSize/2, markerSize, markerSize);
-			ctx.fillRect(box.x - markerSize/2, box.y + box.height - markerSize/2, markerSize, markerSize);
-			ctx.fillRect(box.x + box.width - markerSize/2, box.y + box.height - markerSize/2, markerSize, markerSize);
-			
-			ctx.shadowBlur = 0;
-			
-			// Draw label above box
-			ctx.font = `${fontSize}px 'JetBrains Mono', monospace`;
-			ctx.fillStyle = `rgba(${boxColor.r}, ${boxColor.g}, ${boxColor.b}, 0.9)`;
-			ctx.textAlign = 'left';
-			ctx.textBaseline = 'bottom';
-			ctx.fillText(box.choice.title, box.x, box.y - 6);
-		});
-		
-		requestAnimationFrame(drawFrame);
+	}
+	
+	// Legacy function name for compatibility
+	function drawFrame() {
+		drawStaticBoxes();
 	}
 	
 	let img: HTMLImageElement;
@@ -404,11 +417,7 @@
 	});
 </script>
 
-<svelte:head>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-</svelte:head>
+<!-- Font loaded in app.html -->
 
 <div class="world-card-container w-full flex flex-col">
 	<!-- Terminal-style window -->

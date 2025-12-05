@@ -40,11 +40,22 @@
 	let nodes = $state<any[]>([]);
 	let edges = $state<any[]>([]);
 
+	// Throttle mouse move - only update every 50ms
+	let lastMouseUpdate = 0;
+	let cachedCanvasRect: DOMRect | null = null;
+	
 	function handleMouseMove(event: MouseEvent) {
+		const now = Date.now();
+		if (now - lastMouseUpdate < 50) return; // Throttle to 20fps
+		lastMouseUpdate = now;
+		
 		if (canvasElement) {
-			const rect = canvasElement.getBoundingClientRect();
-			mouseX = event.clientX - rect.left;
-			mouseY = event.clientY - rect.top;
+			// Cache the rect
+			if (!cachedCanvasRect) {
+				cachedCanvasRect = canvasElement.getBoundingClientRect();
+			}
+			mouseX = event.clientX - cachedCanvasRect.left;
+			mouseY = event.clientY - cachedCanvasRect.top;
 		}
 	}
 	
@@ -297,36 +308,30 @@
 		opacity: 1;
 	}
 	
+	/* Simple edge styling - NO expensive drop-shadow */
 	:global(.edge-terminal) {
-		filter: drop-shadow(0 0 6px rgba(200, 230, 180, 0.4));
+		opacity: 0.8;
 	}
 	
-	/* Pulse animations - each edge has different timing */
+	/* Pulse animations - lighter, no filter */
 	:global(.edge-pulse-1 .svelte-flow__edge-path) {
 		stroke-dasharray: 8 12;
-		animation: pulse-flow 3s linear infinite;
-		filter: drop-shadow(0 0 8px rgba(200, 230, 180, 0.5));
+		animation: pulse-flow 4s linear infinite;
 	}
 	
 	:global(.edge-pulse-2 .svelte-flow__edge-path) {
 		stroke-dasharray: 8 12;
-		animation: pulse-flow 3.5s linear infinite;
-		animation-delay: 0.5s;
-		filter: drop-shadow(0 0 8px rgba(147, 112, 219, 0.5));
+		animation: pulse-flow 5s linear infinite;
 	}
 	
 	:global(.edge-pulse-3 .svelte-flow__edge-path) {
 		stroke-dasharray: 8 12;
-		animation: pulse-flow 4s linear infinite;
-		animation-delay: 1s;
-		filter: drop-shadow(0 0 8px rgba(72, 209, 204, 0.5));
+		animation: pulse-flow 6s linear infinite;
 	}
 	
 	:global(.edge-pulse-4 .svelte-flow__edge-path) {
 		stroke-dasharray: 8 12;
-		animation: pulse-flow 3.2s linear infinite;
-		animation-delay: 1.5s;
-		filter: drop-shadow(0 0 8px rgba(255, 182, 193, 0.5));
+		animation: pulse-flow 4.5s linear infinite;
 	}
 	
 	@keyframes pulse-flow {

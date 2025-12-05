@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { sendLetter, getLetterCountToday } from '$lib/stores/mailbox';
 	import { isAuthenticated, profile } from '$lib/stores/auth';
 	
@@ -55,7 +56,7 @@
 				
 				// Navigate back after short delay
 				setTimeout(() => {
-					window.location.href = '/';
+					goto('/');
 				}, 1500);
 			} else {
 				error = result.error || 'Failed to send letter';
@@ -68,14 +69,11 @@
 	}
 	
 	function goBack() {
-		window.location.href = '/';
+		goto('/');
 	}
 </script>
 
 <svelte:head>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 	<title>Write Letter - Attar</title>
 </svelte:head>
 

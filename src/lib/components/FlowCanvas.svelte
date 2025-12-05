@@ -41,6 +41,11 @@
 	fitView={false}
 	minZoom={0.2}
 	maxZoom={2}
+	nodesDraggable={false}
+	nodesConnectable={false}
+	elementsSelectable={false}
+	zoomOnScroll={true}
+	panOnScroll={true}
 	proOptions={{ hideAttribution: true }}
 />
 

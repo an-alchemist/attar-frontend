@@ -2,6 +2,7 @@
 	import { Handle, Position } from '@xyflow/svelte';
 	import type { NodeProps } from '@xyflow/svelte';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { getMemories, type MemoryEntry } from '$lib/stores/memory';
 	
 	type MemoryNodeData = {
@@ -38,19 +39,15 @@
 	
 	function openMemory(memory: MemoryEntry) {
 		// Navigate to memories page with selected memory ID
-		window.location.href = `/memories?selected=${memory.id}`;
+		goto(`/memories?selected=${memory.id}`);
 	}
 	
 	function openAllMemories() {
-		window.location.href = '/memories';
+		goto('/memories');
 	}
 </script>
 
-<svelte:head>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
-	<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-</svelte:head>
+<!-- Font loaded in app.html -->
 
 <div class="memory-node flex flex-col w-full h-full rounded-lg overflow-hidden" style="background: linear-gradient(145deg, rgba(80, 70, 90, 0.9) 0%, rgba(60, 55, 70, 0.95) 100%); border: 1px solid rgba(120, 110, 130, 0.4);">
 	<!-- Center handle for center-to-center connection -->

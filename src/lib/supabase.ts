@@ -1,5 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { browser } from '$app/environment';
 
 // Types for our tables
 export type AttarProfile = {
@@ -78,5 +79,28 @@ export type AttarCapability = {
 	created_at: string;
 };
 
-// Simple client - works everywhere
-export const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+// Create client - singleton
+let _supabase: SupabaseClient | null = null;
+
+function getClient(): SupabaseClient {
+	if (!_supabase) {
+		_supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+	}
+	return _supabase;
+}
+
+// Proxy that lazily creates client
+export const supabase = {
+	get auth() {
+		return getClient().auth;
+	},
+	get storage() {
+		return getClient().storage;
+	},
+	from(table: string) {
+		return getClient().from(table);
+	},
+	rpc(fn: string, params?: any) {
+		return getClient().rpc(fn, params);
+	}
+};

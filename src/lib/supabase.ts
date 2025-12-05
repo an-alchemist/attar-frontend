@@ -1,4 +1,4 @@
-import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ssr';
+import { createBrowserClient } from '@supabase/ssr';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -79,46 +79,6 @@ export type AttarCapability = {
 	created_at: string;
 };
 
-// Browser client - created ONCE and reused
-let browserClient: SupabaseClient | null = null;
-
-export function createBrowserSupabaseClient() {
-	if (browserClient) return browserClient;
-	
-	browserClient = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
-	return browserClient;
-}
-
-// For server-side - create fresh client per request with cookies
-export function createServerSupabaseClient(cookies: {
-	getAll: () => { name: string; value: string }[];
-	setAll: (cookies: { name: string; value: string; options: any }[]) => void;
-}) {
-	return createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
-		cookies
-	});
-}
-
-// Get the appropriate client based on environment
-export function getSupabaseClient(): SupabaseClient {
-	if (isBrowser()) {
-		return createBrowserSupabaseClient();
-	}
-	throw new Error('Cannot use getSupabaseClient on server - use createServerSupabaseClient with cookies');
-}
-
-// Shorthand for browser usage - ensures single instance
-export const supabase = {
-	get auth() {
-		return createBrowserSupabaseClient().auth;
-	},
-	get storage() {
-		return createBrowserSupabaseClient().storage;
-	},
-	from(table: string) {
-		return createBrowserSupabaseClient().from(table);
-	},
-	rpc(fn: string, params?: any) {
-		return createBrowserSupabaseClient().rpc(fn, params);
-	}
-};
+// Create browser client directly - singleton pattern
+// This works because env vars are available at module load time in SvelteKit
+export const supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);

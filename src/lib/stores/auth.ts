@@ -170,7 +170,12 @@ export async function signInWithGoogle() {
 	authState.error = null;
 
 	try {
-		const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+		const { data, error } = await supabase.auth.signInWithOAuth({
+			provider: 'google',
+			options: {
+				redirectTo: `${window.location.origin}/auth/callback`
+			}
+		});
 
 		if (error) {
 			authState.error = error.message;
@@ -188,7 +193,12 @@ export async function signInWithTwitter() {
 	authState.error = null;
 
 	try {
-		const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'twitter' });
+		const { data, error } = await supabase.auth.signInWithOAuth({
+			provider: 'twitter',
+			options: {
+				redirectTo: `${window.location.origin}/auth/callback`
+			}
+		});
 
 		if (error) {
 			authState.error = error.message;

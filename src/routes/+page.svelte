@@ -72,10 +72,14 @@
 	}
 
 	onMount(async () => {
-		// Fetch latest environment and backstory from database
+		// Fetch latest environment and backstory from database IN PARALLEL
 		loading = true;
-		currentEnv = await getLatestEnv();
-		latestBackstory = await getLatestBackstory();
+		const [env, backstory] = await Promise.all([
+			getLatestEnv(),
+			getLatestBackstory()
+		]);
+		currentEnv = env;
+		latestBackstory = backstory;
 		loading = false;
 		
 		const handleNavEvent = (e: Event) => {

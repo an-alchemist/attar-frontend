@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { getTimelineEntries, type TimelineEntry } from '$lib/stores/timeline';
 	import { isMobile } from '$lib/stores/mobile';
 	import DayCard from '$lib/components/DayCard.svelte';
@@ -24,14 +24,13 @@
 		loading = false;
 	});
 	
-	async function goBack() {
+	function goBack() {
 		// On mobile detail view, go back to list first
 		if ($isMobile && mobileView === 'detail') {
 			mobileView = 'list';
 			return;
 		}
-		// Navigate - don't block on invalidateAll
-		goto('/').then(() => invalidateAll());
+		goto('/');
 	}
 	
 	function scrollToEntry(index: number) {

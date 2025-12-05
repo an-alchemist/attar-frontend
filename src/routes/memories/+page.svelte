@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto, invalidateAll } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { getMemories, type MemoryEntry } from '$lib/stores/memory';
 	import { isMobile } from '$lib/stores/mobile';
@@ -53,14 +53,13 @@
 		}
 	});
 	
-	async function goBack() {
+	function goBack() {
 		// On mobile detail view, go back to list first
 		if ($isMobile && mobileView === 'detail') {
 			mobileView = 'list';
 			return;
 		}
-		// Navigate - don't block on invalidateAll
-		goto('/').then(() => invalidateAll());
+		goto('/');
 	}
 	
 	function selectMemory(memory: MemoryEntry) {
